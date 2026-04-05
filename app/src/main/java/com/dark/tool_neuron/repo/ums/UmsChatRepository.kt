@@ -11,6 +11,7 @@ import com.dark.tool_neuron.models.messages.Role
 import com.dark.tool_neuron.models.messages.ToolChainStepData
 import com.dark.tool_neuron.models.vault.ChatExport
 import com.dark.tool_neuron.models.vault.ChatInfo
+import com.dark.tool_neuron.models.vault.VaultStatistics
 import com.dark.tool_neuron.models.engine_schema.DecodingMetrics
 import com.dark.ums.UmsRecord
 import com.dark.ums.UnifiedMemorySystem
@@ -147,6 +148,28 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
             ums.put(msgCollection, msg.toRecord(export.chatId, msgExisting?.id ?: 0))
         }
         updateChatStats(export.chatId)
+    }
+
+    suspend fun getVaultStats(): VaultStatistics = withContext(Dispatchers.IO) {
+        val allChats = ums.getAll(chatCollection)
+        val allMessages = ums.getAll(msgCollection)
+        
+        val totalChats = allChats.size
+        val totalMessages = allMessages.size
+        
+        val oldest = allMessages.minByOrNull { it.getTimestamp(Tags.Message.TIMESTAMP) ?: Long.MAX_VALUE }
+            ?.getTimestamp(Tags.Message.TIMESTAMP) ?: 0L
+        val newest = allMessages.maxByOrNull { it.getTimestamp(Tags.Message.TIMESTAMP) ?: 0L }
+            ?.getTimestamp(Tags.Message.TIMESTAMP) ?: 0L
+            
+        VaultStatistics(
+            totalChats = totalChats,
+            totalMessages = totalMessages,
+            totalSizeBytes = 0L, // UMS doesn't expose file size directly here
+            compressionRatio = 1.0f,
+            oldestMessage = oldest,
+            newestMessage = newest
+        )
     }
 
     private fun UmsRecord.toChatInfo() = ChatInfo(

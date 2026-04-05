@@ -32,6 +32,7 @@ import com.dark.tool_neuron.tts.TTSManager
 import com.dark.tool_neuron.tts.TTSSettings
 import com.dark.tool_neuron.worker.LlmModelWorker
 import com.dark.tool_neuron.models.engine_schema.DecodingMetrics
+import com.dark.tool_neuron.viewmodel.RagQueryDisplayResult
 import com.dark.gguf_lib.toolcalling.ToolCall
 import com.dark.gguf_lib.toolcalling.ToolCallingConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -136,6 +137,21 @@ class ChatViewModel @Inject constructor(
     private val _modelSupportsThinking = MutableStateFlow(false)
     val modelSupportsThinking: StateFlow<Boolean> = _modelSupportsThinking.asStateFlow()
 
+    private val _showDynamicWindow = MutableStateFlow(false)
+    private val _showModelList = MutableStateFlow(false)
+    private var generationJob: Job? = null
+    private val _contextUsagePercent = MutableStateFlow(0f)
+    val contextUsagePercent: StateFlow<Float> = _contextUsagePercent.asStateFlow()
+
+    // TTS Status Proxies
+    val ttsPlayingMsgId = TTSManager.playingMsgId
+    val ttsIsPlaying = TTSManager.isPlaying
+    val ttsSynthesizing = TTSManager.isSynthesizing
+    val ttsModelLoaded = TTSManager.isModelLoaded
+
+    val isTextModelLoaded = LlmModelWorker.isGgufModelLoaded
+    val isImageModelLoaded = LlmModelWorker.isDiffusionModelLoaded
+
     // Combined states for UI components
     val streamingState: StateFlow<StreamingState> = combine(
         _streamingUserMessage,
@@ -148,15 +164,27 @@ class ChatViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Eagerly, StreamingState())
 
     val chatUiState: StateFlow<ChatUiState> = combine(
-        _isGenerating,
-        _currentChatId,
-        _error,
-        _currentGenerationType,
-        _thinkingModeEnabled,
-        _modelSupportsThinking // Assuming this needs to be exposed here
-    ) { generating, chatId, error, genType, thinkingEnabled, modelSupportsThinking ->
-        ChatUiState(generating, chatId, error, genType, thinkingEnabled, modelSupportsThinking)
+        combine(
+            _isGenerating,
+            _currentChatId,
+            _error,
+            _currentGenerationType,
+            _thinkingModeEnabled
+        ) { generating, chatId, error, genType, thinkingEnabled ->
+            FiveTuples(generating, chatId, error, genType, thinkingEnabled)
+        },
+        _modelSupportsThinking
+    ) { five, modelSupportsThinking ->
+        ChatUiState(five.generating, five.chatId, five.error, five.genType, five.thinkingEnabled, modelSupportsThinking)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ChatUiState())
+
+    private data class FiveTuples(
+        val generating: Boolean,
+        val chatId: String?,
+        val error: String?,
+        val genType: ModelType,
+        val thinkingEnabled: Boolean
+    )
 
     val agentState: StateFlow<AgentState> = combine(
         _agentPhase,
@@ -172,8 +200,43 @@ class ChatViewModel @Inject constructor(
         _currentRagContext,
         _currentRagResults
     ) { context, results ->
-        RagState(context, results)
+        RagState(
+            context, 
+            results.map { 
+                RagQueryDisplayResult(it.ragName, it.content, it.score, it.nodeId) 
+            }
+        )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, RagState())
+
+    fun setRagContext(context: String?, results: List<RagResultItem>) {
+        _currentRagContext.value = context
+        _currentRagResults.value = results
+    }
+
+    fun clearRagContext() {
+        _currentRagContext.value = null
+        _currentRagResults.value = emptyList()
+    }
+
+    fun toggleThinkingMode() {
+        _thinkingModeEnabled.value = !_thinkingModeEnabled.value
+    }
+
+    fun setThinkingMode(enabled: Boolean) {
+        _thinkingModeEnabled.value = enabled
+    }
+
+    fun switchToImageGeneration() {
+        _currentGenerationType.value = ModelType.IMAGE_GENERATION
+    }
+
+    fun switchToTextGeneration() {
+        _currentGenerationType.value = ModelType.TEXT_GENERATION
+    }
+
+    fun stopTTS() {
+        TTSManager.stopPlayback()
+    }
 
     val chatConfigState: StateFlow<ChatConfigState> = combine(
         streamingEnabled, // This is already a StateFlow from AppSettingsDataStore
