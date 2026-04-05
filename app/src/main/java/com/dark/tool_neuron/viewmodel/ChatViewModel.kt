@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -84,7 +85,82 @@ class ChatViewModel @Inject constructor(
 
     private val isNewConversation: Boolean get() = _messages.isEmpty()
 
-    // ... (rest of flows/states)
+    private val _streamingUserMessage = MutableStateFlow<String?>(null)
+    val streamingUserMessage: StateFlow<String?> = _streamingUserMessage.asStateFlow()
+
+    private val _streamingAssistantMessage = MutableStateFlow("")
+    val streamingAssistantMessage: StateFlow<String> = _streamingAssistantMessage.asStateFlow()
+
+    private val _streamingImage = MutableStateFlow<Bitmap?>(null)
+    val streamingImage: StateFlow<Bitmap?> = _streamingImage.asStateFlow()
+
+    private val _imageGenerationProgress = MutableStateFlow(0f)
+    val imageGenerationProgress: StateFlow<Float> = _imageGenerationProgress.asStateFlow()
+
+    private val _imageGenerationStep = MutableStateFlow("")
+    val imageGenerationStep: StateFlow<String> = _imageGenerationStep.asStateFlow()
+
+    private var currentUserMessage: Messages? = null
+    private var currentGeneratedImage: Bitmap? = null
+    private var currentMetrics: DecodingMetrics? = null
+    private var currentImageMetrics: ImageGenerationMetrics? = null
+    private val userMessageAdded = AtomicBoolean(false)
+
+    private val _toolChainSteps = MutableStateFlow<List<ToolChainStepData>>(emptyList())
+    val toolChainSteps: StateFlow<List<ToolChainStepData>> = _toolChainSteps.asStateFlow()
+
+    private val _currentToolChainRound = MutableStateFlow(0)
+    val currentToolChainRound: StateFlow<Int> = _currentToolChainRound.asStateFlow()
+
+    private val _agentPhase = MutableStateFlow(AgentPhase.Idle)
+    val agentPhase: StateFlow<AgentPhase> = _agentPhase.asStateFlow()
+
+    private val _agentPlan = MutableStateFlow<String?>(null)
+    val agentPlan: StateFlow<String?> = _agentPlan.asStateFlow()
+
+    private val _agentSummary = MutableStateFlow<String?>(null)
+    val agentSummary: StateFlow<String?> = _agentSummary.asStateFlow()
+
+    private val _currentRagContext = MutableStateFlow<String?>(null)
+    val currentRagContext: StateFlow<String?> = _currentRagContext.asStateFlow()
+
+    private val _currentRagResults = MutableStateFlow<List<RagResultItem>>(emptyList())
+    val currentRagResults: StateFlow<List<RagResultItem>> = _currentRagResults.asStateFlow()
+
+    private val _currentGenerationType = MutableStateFlow(ModelType.TEXT_GENERATION)
+    val currentGenerationType: StateFlow<ModelType> = _currentGenerationType.asStateFlow()
+
+    private val _thinkingModeEnabled = MutableStateFlow(true)
+    val thinkingModeEnabled: StateFlow<Boolean> = _thinkingModeEnabled.asStateFlow()
+
+    private val _contextUsagePercent = MutableStateFlow(0f)
+    val contextUsagePercent: StateFlow<Float> = _contextUsagePercent.asStateFlow()
+
+    private val _showDynamicWindow = MutableStateFlow(false)
+    val showDynamicWindow: StateFlow<Boolean> = _showDynamicWindow.asStateFlow()
+
+    private val _showModelList = MutableStateFlow(false)
+    val showModelList: StateFlow<Boolean> = _showModelList.asStateFlow()
+
+    private var generationJob: Job? = null
+
+    private var imageGenerationStartTime = 0L
+
+    val currentModelId: String?
+        get() = when (_currentGenerationType.value) {
+            ModelType.TEXT_GENERATION -> LlmModelWorker.currentGgufModelId.value
+            ModelType.IMAGE_GENERATION -> LlmModelWorker.currentDiffusionModelId.value
+            else -> null
+        }
+
+    val isAnyTextModelLoaded: Boolean
+        get() = LlmModelWorker.isGgufModelLoaded.value
+
+    private suspend fun getGgufModelSchema(): GgufEngineSchema {
+        val modelId = LlmModelWorker.currentGgufModelId.value ?: return GgufEngineSchema()
+        val config = getModelConfig(modelId) ?: return GgufEngineSchema()
+        return GgufEngineSchema.fromJson(config.modelLoadingParams, config.modelInferenceParams)
+    }
 
     fun startNewConversation() {
         // Cancel any in-flight generation before switching
@@ -1419,21 +1495,6 @@ class ChatViewModel @Inject constructor(
     // ==================== Error Handlers ====================
 
     private fun handleImageGenerationErrorExisting(chatId: String, userMessage: Messages, prompt: String, errorMessage: String) {
-        _isGenerating.value = false
-        reportError(errorMessage)
-        if (!userMessageAdded.get()) { _messages.add(userMessage); userMessageAdded.set(true) }
-        _messages.add(Messages(role = Role.Assistant, content = MessageContent(contentType = ContentType.Text, content = "Error generating image: $errorMessage")))
-        resetStreamingState()
-    }
-
-    private fun handleImageGenerationExceptionExisting(chatId: String, userMessage: Messages, prompt: String, exception: Exception) {
-        _isGenerating.value = false
-        reportError(exception.message)
-        if (!userMessageAdded.get()) { _messages.add(userMessage); userMessageAdded.set(true) }
-        resetStreamingState()
-    }
-
-    private fun reportError(message: String?) {
         _isGenerating.value = false
         reportError(errorMessage)
         if (!userMessageAdded.get()) { _messages.add(userMessage); userMessageAdded.set(true) }
