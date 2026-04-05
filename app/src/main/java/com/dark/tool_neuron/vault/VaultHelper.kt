@@ -230,17 +230,12 @@ object VaultHelper {
 
             val messages = items.mapNotNull { item ->
                 try {
-                    val message = json.decodeFromString<Messages>(item.content)
-                    if (message.timestamp == null) {
-                        message.copy(timestamp = item.timestamp)
-                    } else {
-                        message
-                    }
+                    json.decodeFromString<Messages>(item.content)
                 } catch (e: Exception) {
                     VaultLogger.log(LogLevel.ERROR, "VAULT", "Failed to decode message in chat: ${e.message}")
                     null
                 }
-            }.sortedBy { it.timestamp ?: 0L }
+            }.sortedBy { it.timestamp }
 
             val decryptDuration = System.currentTimeMillis() - decryptStart
             VaultLogger.log(LogLevel.DEBUG, "CRYPTO", "✓ Decrypted ${messages.size} messages (${decryptDuration}ms)")

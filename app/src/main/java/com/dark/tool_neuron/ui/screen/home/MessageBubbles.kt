@@ -56,7 +56,7 @@ internal fun UserMessageBubble(message: Messages) {
                 bottomStart = 16.dp,
                 bottomEnd = 16.dp
             ),
-            color = Color(0xFFE7FFDB), // WhatsApp-like light green
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
             contentColor = Color.Black,
             modifier = Modifier.widthIn(max = 300.dp)
         ) {

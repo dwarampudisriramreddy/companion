@@ -47,9 +47,14 @@ class LLMService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val ggufEngine = GGUFEngine()
     private val diffusionEngine = DiffusionEngine()
-    private val appSettings by lazy { AppSettingsDataStore(applicationContext) }
+    private lateinit var appSettings: AppSettingsDataStore
 
-    init {
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+        val appContext = applicationContext ?: this
+        appSettings = AppSettingsDataStore(appContext)
+        
         scope.launch {
             appSettings.systemPrompt.collect { prompt ->
                 if (ggufEngine.isLoaded && prompt.isNotEmpty()) {
