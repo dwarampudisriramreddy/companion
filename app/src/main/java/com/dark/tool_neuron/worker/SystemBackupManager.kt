@@ -12,6 +12,8 @@ import com.dark.tool_neuron.models.table_schema.AiMemory
 import com.dark.tool_neuron.models.table_schema.KnowledgeRelation
 import com.dark.tool_neuron.models.table_schema.MemoryCategory
 import com.dark.tool_neuron.models.vault.ChatExport
+import com.dark.tool_neuron.models.vault.ChatInfo
+import com.dark.tool_neuron.models.messages.Messages
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable

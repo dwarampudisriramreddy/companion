@@ -6,6 +6,7 @@ import com.dark.tool_neuron.data.AppSettingsDataStore
 import com.dark.tool_neuron.data.VaultManager
 import com.dark.tool_neuron.database.dao.RagDao
 import com.dark.tool_neuron.models.enums.PathType
+import com.dark.tool_neuron.models.vault.ChatInfo
 import com.dark.tool_neuron.repo.RagRepository
 import com.dark.tool_neuron.repo.ums.UmsMemoryRepository
 import com.dark.tool_neuron.repo.ums.UmsModelRepository
@@ -14,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import com.dark.tool_neuron.global.AppPaths
+import com.dark.tool_neuron.models.messages.Messages
 import java.io.File
 
 /**
