@@ -133,16 +133,58 @@ class ChatViewModel @Inject constructor(
     private val _thinkingModeEnabled = MutableStateFlow(true)
     val thinkingModeEnabled: StateFlow<Boolean> = _thinkingModeEnabled.asStateFlow()
 
-    private val _contextUsagePercent = MutableStateFlow(0f)
-    val contextUsagePercent: StateFlow<Float> = _contextUsagePercent.asStateFlow()
+    private val _modelSupportsThinking = MutableStateFlow(false)
+    val modelSupportsThinking: StateFlow<Boolean> = _modelSupportsThinking.asStateFlow()
 
-    private val _showDynamicWindow = MutableStateFlow(false)
-    val showDynamicWindow: StateFlow<Boolean> = _showDynamicWindow.asStateFlow()
+    // Combined states for UI components
+    val streamingState: StateFlow<StreamingState> = combine(
+        _streamingUserMessage,
+        _streamingAssistantMessage,
+        _streamingImage,
+        _imageGenerationProgress,
+        _imageGenerationStep
+    ) { user, assistant, image, progress, step ->
+        StreamingState(user, assistant, image, progress, step)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, StreamingState())
 
-    private val _showModelList = MutableStateFlow(false)
-    val showModelList: StateFlow<Boolean> = _showModelList.asStateFlow()
+    val chatUiState: StateFlow<ChatUiState> = combine(
+        _isGenerating,
+        _currentChatId,
+        _error,
+        _currentGenerationType,
+        _thinkingModeEnabled,
+        _modelSupportsThinking // Assuming this needs to be exposed here
+    ) { generating, chatId, error, genType, thinkingEnabled, modelSupportsThinking ->
+        ChatUiState(generating, chatId, error, genType, thinkingEnabled, modelSupportsThinking)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, ChatUiState())
 
-    private var generationJob: Job? = null
+    val agentState: StateFlow<AgentState> = combine(
+        _agentPhase,
+        _agentPlan,
+        _agentSummary,
+        _toolChainSteps,
+        _currentToolChainRound
+    ) { phase, plan, summary, steps, round ->
+        AgentState(phase, plan, summary, steps, round)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, AgentState())
+
+    val ragState: StateFlow<RagState> = combine(
+        _currentRagContext,
+        _currentRagResults
+    ) { context, results ->
+        RagState(context, results)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, RagState())
+
+    val chatConfigState: StateFlow<ChatConfigState> = combine(
+        streamingEnabled, // This is already a StateFlow from AppSettingsDataStore
+        chatMemoryEnabled, // This is already a StateFlow from AppSettingsDataStore
+        _showDynamicWindow,
+        _showModelList
+    ) { streamingEnabled, chatMemoryEnabled, showDynamicWindow, showModelList ->
+        ChatConfigState(streamingEnabled, chatMemoryEnabled, showDynamicWindow, showModelList)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, ChatConfigState())
+
+    // ... (rest of the class) ...
 
     private var imageGenerationStartTime = 0L
 
