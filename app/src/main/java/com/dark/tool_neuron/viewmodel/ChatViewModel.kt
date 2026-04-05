@@ -144,7 +144,7 @@ class ChatViewModel @Inject constructor(
     val contextUsagePercent: StateFlow<Float> = _contextUsagePercent.asStateFlow()
 
     // TTS Status Proxies
-    val ttsPlayingMsgId = TTSManager.playingMsgId
+    val ttsPlayingMsgId = TTSManager.currentPlayingMsgId
     val ttsIsPlaying = TTSManager.isPlaying
     val ttsSynthesizing = TTSManager.isSynthesizing
     val ttsModelLoaded = TTSManager.isModelLoaded
@@ -224,18 +224,6 @@ class ChatViewModel @Inject constructor(
 
     fun setThinkingMode(enabled: Boolean) {
         _thinkingModeEnabled.value = enabled
-    }
-
-    fun switchToImageGeneration() {
-        _currentGenerationType.value = ModelType.IMAGE_GENERATION
-    }
-
-    fun switchToTextGeneration() {
-        _currentGenerationType.value = ModelType.TEXT_GENERATION
-    }
-
-    fun stopTTS() {
-        TTSManager.stopPlayback()
     }
 
     val chatConfigState: StateFlow<ChatConfigState> = combine(

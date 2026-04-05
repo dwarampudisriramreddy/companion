@@ -52,8 +52,8 @@ fun BodyContent(
     val ttsModelLoaded by chatViewModel.ttsModelLoaded.collectAsStateWithLifecycle()
 
     val context = androidx.compose.ui.platform.LocalContext.current
-    val imageBlurEnabled by remember { com.dark.tool_neuron.data.AppSettingsDataStore(context).imageBlurEnabled }
-        .collectAsStateWithLifecycle(initialValue = true)
+    val dataStore = remember { com.dark.tool_neuron.data.AppSettingsDataStore(context) }
+    val imageBlurEnabled by dataStore.imageBlurEnabled.collectAsStateWithLifecycle(initialValue = true)
 
     val listState = rememberLazyListState()
 

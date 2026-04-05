@@ -48,6 +48,7 @@ import com.dark.tool_neuron.ui.components.ActionButton
 import com.dark.tool_neuron.ui.components.ActionProgressButton
 import com.dark.tool_neuron.ui.components.ActionToggleButton
 import com.dark.tool_neuron.ui.components.MemoryOverlayBottomSheet
+import com.dark.tool_neuron.models.messages.RagResultItem
 import com.dark.tool_neuron.ui.components.ModeToggleSwitch
 import com.dark.tool_neuron.ui.components.ModelListItem
 import com.dark.tool_neuron.ui.components.PluginOverlayBottomSheet
@@ -381,7 +382,9 @@ internal fun BottomBar(
                                                         val ragContext = ragViewModel.queryAndStoreResults(userQuery)
                                                         chatViewModel.setRagContext(
                                                             ragContext.ifBlank { null },
-                                                            ragViewModel.lastRagResults.value
+                                                            ragViewModel.lastRagResults.value.map { 
+                                                                RagResultItem(it.ragName, it.content, it.score, it.nodeId) 
+                                                            }
                                                         )
                                                         chatViewModel.sendTextMessage(userQuery)
                                                     }
