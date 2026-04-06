@@ -49,21 +49,6 @@ class LLMService : Service() {
     private val diffusionEngine = DiffusionEngine()
     private lateinit var appSettings: AppSettingsDataStore
 
-    override fun onCreate() {
-        super.onCreate()
-        instance = this
-        val appContext = applicationContext ?: this
-        appSettings = AppSettingsDataStore(appContext)
-        
-        scope.launch {
-            appSettings.systemPrompt.collect { prompt ->
-                if (ggufEngine.isLoaded && prompt.isNotEmpty()) {
-                    ggufEngine.setSystemPrompt(prompt)
-                }
-            }
-        }
-    }
-
     private fun collectGenerationFlow(
         flow: kotlinx.coroutines.flow.Flow<GenerationEvent>,
         callback: IGgufGenerationCallback
@@ -506,6 +491,9 @@ class LLMService : Service() {
         instance = this
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
 
+        val appContext = applicationContext ?: this
+        appSettings = AppSettingsDataStore(appContext)
+
         // Tell llama.cpp where to find CPU backend variant .so files
         // (libggml-cpu-android_armv8.*.so) for runtime arch-level dispatch.
         try {
@@ -522,6 +510,14 @@ class LLMService : Service() {
                 Log.i(TAG, "DiffusionEngine initialized in LLMService")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize diffusion engine", e)
+            }
+        }
+
+        scope.launch {
+            appSettings.systemPrompt.collect { prompt ->
+                if (ggufEngine.isLoaded && prompt.isNotEmpty()) {
+                    ggufEngine.setSystemPrompt(prompt)
+                }
             }
         }
 
