@@ -23,6 +23,7 @@ import com.dark.tool_neuron.models.messages.ToolChainStepData
 import com.dark.tool_neuron.models.plugins.PluginExecutionMetrics
 import com.dark.tool_neuron.models.plugins.PluginResultData
 import com.dark.tool_neuron.plugins.PluginManager
+import com.dark.tool_neuron.data.VaultManager
 import com.dark.tool_neuron.state.AppStateManager
 import com.dark.tool_neuron.worker.ChatManager
 import com.dark.tool_neuron.worker.DiffusionConfig
@@ -163,8 +164,15 @@ class ChatViewModel @Inject constructor(
         _streamingImage,
         _imageGenerationProgress,
         _imageGenerationStep
-    ) { userText, userImage, assistantText, assistantImage, progress, step ->
-        StreamingState(userText, userImage, assistantText, assistantImage, progress, step)
+    ) { args ->
+        StreamingState(
+            userMessage = args[0] as String?,
+            userImage = args[1] as String?,
+            assistantMessage = args[2] as String,
+            image = args[3] as android.graphics.Bitmap?,
+            imageProgress = args[4] as Float,
+            imageStep = args[5] as String
+        )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, StreamingState())
 
     val chatUiState: StateFlow<ChatUiState> = combine(
@@ -504,7 +512,6 @@ class ChatViewModel @Inject constructor(
                 val finalResponse = resultBuilder.toString()
                 _streamingAssistantMessage.value = finalResponse
 
-                val chatId = "default_chat"
                 val pendingUserMsg = currentUserMessage
                 if (!userMessageAdded.get() && pendingUserMsg != null) {
                     _messages.add(pendingUserMsg)
