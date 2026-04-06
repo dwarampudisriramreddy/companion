@@ -1,6 +1,10 @@
 package com.dark.tool_neuron.ui.screen.home
 
+import android.Manifest
 import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -113,6 +117,44 @@ internal fun BottomBar(
 
     // More Options overlay state
     var showMoreOptions by remember { mutableStateOf(false) }
+
+    // Camera handling
+    val cameraPhotoFile = remember { 
+        java.io.File(context.cacheDir, "camera_photo.jpg").apply {
+            if (exists()) delete()
+            createNewFile()
+        }
+    }
+    val cameraPhotoUri = remember(cameraPhotoFile) {
+        androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", cameraPhotoFile)
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            try {
+                context.contentResolver.openInputStream(cameraPhotoUri)?.use { input ->
+                    val bytes = input.readBytes()
+                    val prompt = if (value.isNotBlank()) value else "Describe this image"
+                    chatViewModel.sendChatWithImages(prompt, listOf(bytes))
+                    value = ""
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("BottomBar", "Failed to process camera photo", e)
+            }
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            cameraLauncher.launch(cameraPhotoUri)
+        } else {
+            android.widget.Toast.makeText(context, "Camera permission required for photos", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Track if any model is loaded
     val isModelLoaded = currentModelID.isNotEmpty()
@@ -335,10 +377,11 @@ internal fun BottomBar(
                             checked = isWebSearchEnabled,
                             enabled = isToolCallingModelLoaded,
                             icon = TnIcons.World
-                        )
-                    }
+                            )
+                            }
 
-                    // 5. Thinking Toggle
+                            // 5. Thinking Toggle
+
                     if (isTextModelLoaded) {
                         ActionToggleButton(
                             onCheckedChange = { chatViewModel.toggleThinkingMode() },
@@ -347,6 +390,18 @@ internal fun BottomBar(
                             icon = TnIcons.Brain
                         )
                     }
+
+                    // 6. Camera
+                    ActionButton(
+                        onClickListener = { 
+                            if (isTextModelLoaded) {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            } else {
+                                android.widget.Toast.makeText(context, "Please load a text model first", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        icon = TnIcons.Camera
+                    )
 
                     Spacer(Modifier.weight(1f))
 

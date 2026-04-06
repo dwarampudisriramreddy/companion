@@ -26,6 +26,7 @@ import com.dark.tool_neuron.global.Standards
 @Composable
 internal fun StreamingView(
     userMessage: String,
+    userImage: String? = null,
     assistantMessage: String,
     streamingImage: Bitmap?,
     imageProgress: Float,
@@ -91,8 +92,9 @@ internal fun StreamingView(
             message = Messages(
                 role = Role.User,
                 content = MessageContent(
-                    contentType = ContentType.Text,
-                    content = userMessage
+                    contentType = if (userImage != null) ContentType.TextWithImage else ContentType.Text,
+                    content = userMessage,
+                    imageData = userImage
                 )
             )
         )

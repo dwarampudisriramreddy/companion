@@ -52,6 +52,13 @@ import com.dark.tool_neuron.models.table_schema.MemoryCategory
 import com.dark.tool_neuron.ui.components.ActionButton
 import com.dark.tool_neuron.worker.MemoryExtractor
 import kotlinx.coroutines.launch
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import com.dark.tool_neuron.global.ImageUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -290,6 +297,7 @@ private fun MemoryItem(
     onDelete: () -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -334,6 +342,29 @@ private fun MemoryItem(
                 }
             }
 
+            if (memory.imageData != null) {
+                val bitmap = remember(memory.imageData) {
+                    try {
+                        val bytes = java.util.Base64.getDecoder().decode(memory.imageData)
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                bitmap?.let {
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = Standards.SpacingSm)
+                            .aspectRatio(1.5f)
+                            .clip(RoundedCornerShape(Standards.RadiusMd)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(Standards.SpacingXs))
 
             Row(
@@ -372,6 +403,21 @@ private fun MemoryItem(
                     horizontalArrangement = Arrangement.spacedBy(Standards.SpacingSm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (memory.imageData != null) {
+                        IconButton(
+                            onClick = { ImageUtils.downloadImage(context, memory.imageData) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(TnIcons.Download, null, modifier = Modifier.size(16.dp))
+                        }
+                        IconButton(
+                            onClick = { ImageUtils.shareImage(context, memory.imageData) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(TnIcons.Share, null, modifier = Modifier.size(16.dp))
+                        }
+                    }
+
                     Text(
                         text = "${(strength * 100).roundToInt()}%",
                         style = MaterialTheme.typography.labelSmall,

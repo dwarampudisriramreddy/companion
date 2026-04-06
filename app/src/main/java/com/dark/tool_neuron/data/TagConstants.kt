@@ -9,9 +9,18 @@ object UmsCollections {
     const val KNOWLEDGE_RELATIONS = "knowledge_relations"
     const val CHATS = "chats"
     const val MESSAGES = "messages"
+    const val DIARY = "diary"
 }
 
 object Tags {
+
+    object Diary {
+        const val ENTITY_ID = 1      // BYTES: original String UUID
+        const val CONTENT = 2        // BYTES: The AI's thought
+        const val CREATED_AT = 3     // FIXED64
+        const val TOPIC = 4          // BYTES: "User", "Self", "Awareness"
+        const val MOOD = 5           // BYTES: Optional "Curious", "Reflective", etc
+    }
 
     object Model {
         const val ENTITY_ID = 1       // BYTES: original String UUID
@@ -63,6 +72,8 @@ object Tags {
         const val IS_SUMMARIZED = 10 // VARINT: 0/1
         const val SUMMARY_GROUP_ID = 11 // BYTES: nullable
         const val PERSONA_ID = 12
+        const val CONTENT_TYPE = 13
+        const val IMAGE_DATA = 14
     }
 
     object KgEntity {

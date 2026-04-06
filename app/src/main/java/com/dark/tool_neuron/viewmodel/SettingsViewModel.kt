@@ -101,6 +101,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val aiMemoryEnabled: StateFlow<Boolean> = appSettingsDataStore.aiMemoryEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val diaryEnabled: StateFlow<Boolean> = appSettingsDataStore.diaryEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     val askModelReloadDialog: StateFlow<Boolean> = appSettingsDataStore.askModelReloadDialog
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
@@ -174,6 +177,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setAiMemoryEnabled(enabled: Boolean) {
         viewModelScope.launch { appSettingsDataStore.updateAiMemoryEnabled(enabled) }
+    }
+
+    fun setDiaryEnabled(enabled: Boolean) {
+        viewModelScope.launch { appSettingsDataStore.updateDiaryEnabled(enabled) }
     }
 
     fun setAskModelReloadDialog(enabled: Boolean) {

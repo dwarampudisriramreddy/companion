@@ -163,11 +163,20 @@ class ChatManager {
 
     suspend fun pinMessageToVault(message: Messages): Result<Unit> = withContext(Dispatchers.IO) {
         withUmsReady {
+            val contentTypeValue = when (message.content.contentType) {
+                ContentType.Text -> 1
+                ContentType.Image -> 2
+                ContentType.TextWithImage -> 3
+                else -> 1
+            }
+
             val memory = AiMemory(
                 fact = message.content.content,
                 category = MemoryCategory.PINNED,
-                sourceChatId = null, // Or link to current chat if available
-                personaId = message.personaId
+                sourceChatId = null,
+                personaId = message.personaId,
+                contentType = contentTypeValue,
+                imageData = message.content.imageData
             )
             VaultManager.memoryRepo?.insert(memory) ?: throw IllegalStateException("Memory vault not ready")
         }

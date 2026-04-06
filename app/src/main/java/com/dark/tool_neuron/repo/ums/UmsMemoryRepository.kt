@@ -90,6 +90,8 @@ private fun AiMemory.toRecord(existingId: Int = 0): UmsRecord {
     b.putBool(Tags.Memory.IS_SUMMARIZED, isSummarized)
     if (summaryGroupId != null) b.putString(Tags.Memory.SUMMARY_GROUP_ID, summaryGroupId)
     if (personaId != null) b.putString(Tags.Memory.PERSONA_ID, personaId)
+    b.putInt(Tags.Memory.CONTENT_TYPE, contentType)
+    if (imageData != null) b.putString(Tags.Memory.IMAGE_DATA, imageData)
     return b.build()
 }
 
@@ -107,5 +109,7 @@ private fun UmsRecord.toAiMemory(): AiMemory = AiMemory(
     embedding = getBytes(Tags.Memory.EMBEDDING),
     isSummarized = getBool(Tags.Memory.IS_SUMMARIZED) ?: false,
     summaryGroupId = getString(Tags.Memory.SUMMARY_GROUP_ID),
-    personaId = getString(Tags.Memory.PERSONA_ID)
+    personaId = getString(Tags.Memory.PERSONA_ID),
+    contentType = getInt(Tags.Memory.CONTENT_TYPE) ?: 1,
+    imageData = getString(Tags.Memory.IMAGE_DATA)
 )

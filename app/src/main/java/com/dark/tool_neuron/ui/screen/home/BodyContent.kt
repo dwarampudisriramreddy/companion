@@ -79,6 +79,7 @@ fun BodyContent(
             if (chatState.isGenerating && streaming.userMessage != null) {
                 StreamingView(
                     userMessage = streaming.userMessage!!,
+                    userImage = streaming.userImage,
                     assistantMessage = streaming.assistantMessage,
                     streamingImage = streaming.image,
                     imageProgress = streaming.imageProgress,

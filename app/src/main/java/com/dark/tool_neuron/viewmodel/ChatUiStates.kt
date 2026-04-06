@@ -13,6 +13,7 @@ import com.dark.tool_neuron.models.messages.ToolChainStepData
 
 data class StreamingState(
     val userMessage: String? = null,
+    val userImage: String? = null,
     val assistantMessage: String = "",
     val image: Bitmap? = null,
     val imageProgress: Float = 0f,

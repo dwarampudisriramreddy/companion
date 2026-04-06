@@ -46,6 +46,7 @@ fun SettingsScreen(
     val loadTTSOnStart by viewModel.loadTTSOnStart.collectAsStateWithLifecycle()
     val codeHighlightEnabled by viewModel.codeHighlightEnabled.collectAsStateWithLifecycle()
     val aiMemoryEnabled by viewModel.aiMemoryEnabled.collectAsStateWithLifecycle()
+    val diaryEnabled by viewModel.diaryEnabled.collectAsStateWithLifecycle()
     val askModelReloadDialog by viewModel.askModelReloadDialog.collectAsStateWithLifecycle()
     val systemPrompt by viewModel.systemPrompt.collectAsStateWithLifecycle()
     val hardwareTuningEnabled by viewModel.hardwareTuningEnabled.collectAsStateWithLifecycle()
@@ -146,6 +147,7 @@ fun SettingsScreen(
             // ── AI Memory ──
             aiMemorySection(
                 aiMemoryEnabled = aiMemoryEnabled,
+                diaryEnabled = diaryEnabled,
                 onAiMemoryClick = onAiMemoryClick,
                 viewModel = viewModel
             )

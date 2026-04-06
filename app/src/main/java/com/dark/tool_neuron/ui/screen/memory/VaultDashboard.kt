@@ -46,7 +46,10 @@ import com.dark.tool_neuron.ui.icons.TnIcons
 import com.dark.tool_neuron.global.Standards
 
 @Composable
-fun VaultDashboard(onNavigateBack: () -> Unit) {
+fun VaultDashboard(
+    onNavigateBack: () -> Unit,
+    onDiaryClick: () -> Unit = {}
+) {
     val viewModel: VaultManagementViewModel = viewModel()
     var showLogs by remember { mutableStateOf(false) }
 
@@ -203,6 +206,17 @@ fun VaultDashboard(onNavigateBack: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = Standards.SpacingLg)
+                )
+            }
+
+            // AI Diary
+            item {
+                ToolActionCard(
+                    title = "AI Diary",
+                    description = "Reflective thoughts about you and its awareness",
+                    icon = TnIcons.Book,
+                    onClick = onDiaryClick,
                     modifier = Modifier.padding(horizontal = Standards.SpacingLg)
                 )
             }
@@ -397,4 +411,3 @@ private fun ToolActionCard(
         }
     }
 }
-

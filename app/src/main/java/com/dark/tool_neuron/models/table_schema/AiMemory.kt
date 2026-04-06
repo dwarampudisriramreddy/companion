@@ -57,7 +57,13 @@ data class AiMemory(
     val summaryGroupId: String? = null,
 
     @ColumnInfo(name = "persona_id")
-    val personaId: String? = null
+    val personaId: String? = null,
+
+    @ColumnInfo(name = "content_type")
+    val contentType: Int = 1, // 1 = Text, 2 = Image, 3 = TextWithImage
+
+    @ColumnInfo(name = "image_data")
+    val imageData: String? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

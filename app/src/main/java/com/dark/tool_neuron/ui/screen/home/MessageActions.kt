@@ -18,6 +18,8 @@ import com.dark.tool_neuron.ui.components.PluginResultCard
 import com.dark.tool_neuron.ui.components.ToolChainDisplay
 import com.dark.tool_neuron.ui.icons.TnIcons
 import com.dark.tool_neuron.viewmodel.AgentPhase
+import com.dark.tool_neuron.global.ImageUtils
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import com.dark.tool_neuron.global.Standards
 
@@ -112,6 +114,10 @@ internal fun MessageActionsBottomSheet(
     val scope = rememberCoroutineScope()
     val isTextContent = message.content.contentType == ContentType.Text
     val isAssistant = message.role == Role.Assistant
+    val context = LocalContext.current
+    val hasImage = message.content.contentType == ContentType.Image || 
+                   message.content.contentType == ContentType.TextWithImage ||
+                   message.content.imageData != null
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -193,6 +199,28 @@ internal fun MessageActionsBottomSheet(
                         }
                     )
                 }
+            }
+
+            if (hasImage && message.content.imageData != null) {
+                // Download Image
+                ListItem(
+                    headlineContent = { Text("Download Image") },
+                    leadingContent = { Icon(TnIcons.Download, contentDescription = null) },
+                    modifier = Modifier.clickable {
+                        ImageUtils.downloadImage(context, message.content.imageData)
+                        onDismiss()
+                    }
+                )
+
+                // Share Image
+                ListItem(
+                    headlineContent = { Text("Share Image") },
+                    leadingContent = { Icon(TnIcons.Share, contentDescription = null) },
+                    modifier = Modifier.clickable {
+                        ImageUtils.shareImage(context, message.content.imageData)
+                        onDismiss()
+                    }
+                )
             }
 
             // Delete Action (Common for both)

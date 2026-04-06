@@ -113,8 +113,19 @@ class WebScrapingSearchService {
         }
         Log.w(TAG, "Desktop strategy failed: ${desktopResult.exceptionOrNull()?.message}")
 
+        // Strategy 3: DuckDuckGo HTML (v7.duckduckgo.com/html)
+        val ddgResult = scrapeDuckDuckGo(sanitized, capped)
+        if (ddgResult.isSuccess) {
+            val response = ddgResult.getOrThrow()
+            if (response.results.isNotEmpty()) {
+                Log.d(TAG, "DuckDuckGo strategy returned ${response.results.size} results")
+                return@withContext Result.success(response)
+            }
+        }
+        Log.w(TAG, "DuckDuckGo strategy failed: ${ddgResult.exceptionOrNull()?.message}")
+
         Result.failure(
-            IOException("All Google search strategies failed for: $sanitized")
+            IOException("All search strategies failed (Google Mobile, Google Desktop, DuckDuckGo) for: $sanitized")
         )
     }
 
@@ -263,6 +274,71 @@ class WebScrapingSearchService {
         Result.failure(lastException ?: IOException("Desktop Google scrape failed"))
     }
 
+    // ── Strategy 3: DuckDuckGo HTML ──
+
+    private suspend fun scrapeDuckDuckGo(
+        query: String,
+        maxResults: Int
+    ): Result<DuckDuckGoSearchResponse> = withContext(Dispatchers.IO) {
+        try {
+            val startTime = System.currentTimeMillis()
+            val encoded = URLEncoder.encode(query, "UTF-8")
+            val url = "https://html.duckduckgo.com/html/?q=$encoded"
+
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", desktopUserAgents.random())
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+
+                val html = response.body.string()
+                val doc = Jsoup.parse(html)
+                val results = mutableListOf<SearchResult>()
+
+                val links = doc.select("div.result")
+                for (link in links) {
+                    if (results.size >= maxResults) break
+
+                    val titleEl = link.selectFirst("a.result__a") ?: continue
+                    val title = titleEl.text().trim()
+                    var resultUrl = titleEl.attr("href")
+
+                    // Handle DuckDuckGo redirect URLs
+                    if (resultUrl.contains("uddg=")) {
+                        resultUrl = resultUrl.substringAfter("uddg=").substringBefore("&")
+                        resultUrl = URLDecoder.decode(resultUrl, "UTF-8")
+                    }
+
+                    if (!resultUrl.startsWith("http") && resultUrl.startsWith("//")) {
+                        resultUrl = "https:$resultUrl"
+                    }
+                    
+                    val snippetEl = link.selectFirst("a.result__snippet") ?: link.selectFirst("div.result__snippet")
+                    val snippet = snippetEl?.text()?.trim() ?: ""
+
+                    if (title.isNotBlank() && resultUrl.startsWith("http")) {
+                        results.add(
+                            SearchResult(
+                                title = title,
+                                snippet = snippet,
+                                url = resultUrl,
+                                position = results.size + 1
+                            )
+                        )
+                    }
+                }
+
+                return@withContext Result.success(
+                    DuckDuckGoSearchResponse(query, results, results.size, System.currentTimeMillis() - startTime)
+                )
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ── HTML Parsing ──
 
     /**
@@ -277,7 +353,7 @@ class WebScrapingSearchService {
             val doc = Jsoup.parse(html)
 
             // Strategy A: Standard result divs with <h3> headings
-            val resultDivs = doc.select("div.g, div[data-hveid] div.g, div.Gx5Zad, div.tF2Cxc")
+            val resultDivs = doc.select("div.g, div[data-hveid] div.g, div.Gx5Zad, div.tF2Cxc, div.MjjYud")
             for (div in resultDivs) {
                 if (results.size >= maxResults) break
 
@@ -420,7 +496,7 @@ class WebScrapingSearchService {
         // Try common snippet selectors
         val selectors = listOf(
             "div.VwiC3b", "span.st", "div[data-sncf]", "div.IsZvec",
-            "div.s", "span.aCOpRe"
+            "div.s", "span.aCOpRe", "div.yUvMmc", "div.MU7Ybd"
         )
         for (sel in selectors) {
             val el = container.selectFirst(sel)

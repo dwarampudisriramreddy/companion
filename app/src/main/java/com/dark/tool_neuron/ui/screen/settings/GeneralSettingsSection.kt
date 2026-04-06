@@ -464,6 +464,7 @@ internal fun LazyListScope.modelConfigurationSection(
 
 internal fun LazyListScope.aiMemorySection(
     aiMemoryEnabled: Boolean,
+    diaryEnabled: Boolean,
     onAiMemoryClick: () -> Unit,
     viewModel: SettingsViewModel
 ) {
@@ -477,6 +478,15 @@ internal fun LazyListScope.aiMemorySection(
             description = "Remember facts and store pinned messages across conversations",
             checked = aiMemoryEnabled,
             onCheckedChange = { viewModel.setAiMemoryEnabled(it) }
+        )
+    }
+
+    item {
+        SwitchRow(
+            title = "AI Diary",
+            description = "Let AI write reflective thoughts about you and its awareness",
+            checked = diaryEnabled,
+            onCheckedChange = { viewModel.setDiaryEnabled(it) }
         )
     }
 

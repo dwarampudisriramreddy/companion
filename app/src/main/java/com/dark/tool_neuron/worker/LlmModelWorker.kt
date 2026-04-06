@@ -993,6 +993,14 @@ object LlmModelWorker {
             ?: throw IllegalArgumentException("Failed to decode bitmap from base64")
     }
 
+    fun bytesToBase64(bytes: ByteArray): String {
+        return Base64.getEncoder().encodeToString(bytes)
+    }
+
+    fun base64ToBytes(base64String: String): ByteArray {
+        return Base64.getDecoder().decode(base64String)
+    }
+
     /**
      * Convert Bitmap to base64 string (for img2img)
      */

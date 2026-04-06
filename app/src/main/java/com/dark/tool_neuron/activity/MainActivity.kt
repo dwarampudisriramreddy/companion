@@ -185,6 +185,7 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object VaultManager : Screen("vault_manager")
     object AiMemory : Screen("ai_memory")
+    object Diary : Screen("ai_diary")
     object ImageGenSetup : Screen("image_gen_setup")
 }
 
@@ -337,11 +338,20 @@ fun AppNavigation(
         }
 
         composable(Screen.VaultManager.route) {
-            VaultDashboard(onNavigateBack = { navController.popBackStack() })
+            VaultDashboard(
+                onNavigateBack = { navController.popBackStack() },
+                onDiaryClick = { navController.navigate(Screen.Diary.route) }
+            )
         }
 
         composable(Screen.AiMemory.route) {
             AiMemoryScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Diary.route) {
+            com.dark.tool_neuron.ui.screen.diary.DiaryScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

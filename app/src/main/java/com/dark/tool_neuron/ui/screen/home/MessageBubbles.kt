@@ -96,11 +96,16 @@ internal fun UserMessageBubble(
     onLongClick: (() -> Unit)? = null
 ) {
     MessageBubble(isUser = true, timestamp = message.timestamp, onLongClick = onLongClick) {
-        SelectionContainer {
-            MarkdownText(
-                text = message.content.content,
-                modifier = Modifier.padding(bottom = 2.dp)
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (message.content.contentType == ContentType.TextWithImage && message.content.imageData != null) {
+                ImageMessageBubble(message, imageBlurEnabled = false)
+            }
+            SelectionContainer {
+                MarkdownText(
+                    text = message.content.content,
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+            }
         }
     }
 }

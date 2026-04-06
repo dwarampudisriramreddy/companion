@@ -110,4 +110,9 @@ object AppContainer {
         return VaultManager.chatRepo ?: error("VaultManager not initialized — cannot access ChatRepository")
     }
 
+    fun getDiaryRepo(): com.dark.tool_neuron.repo.ums.UmsDiaryRepository {
+        if (VaultManager.diaryRepo == null) ensureVaultInitialized()
+        return VaultManager.diaryRepo ?: error("VaultManager not initialized — cannot access DiaryRepository")
+    }
+
 }

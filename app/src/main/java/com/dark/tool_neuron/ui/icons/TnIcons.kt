@@ -118,6 +118,7 @@ object TnIcons {
 
     // ── Time ──
     val Clock by lazy { tabler("M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0", "M12 7v5l3 3") }
+    val Camera by lazy { tabler("M5 7a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-10z", "M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0", "M17 9h.01") }
     val CalendarTime by lazy { tabler("M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4", "M14 18a4 4 0 1 0 8 0a4 4 0 1 0 -8 0", "M15 3v4", "M7 3v4", "M3 11h16", "M18 16.496v1.504l1 1") }
 
     // ── Connectivity ──
@@ -158,6 +159,7 @@ object TnIcons {
 
     // ── Lucide ──
     val BrainCircuit by lazy { lucide("M12 5a3 3 0 1 0-5.997 .125a4 4 0 0 0-2.526 5.77a4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z", "M9 13a4.5 4.5 0 0 0 3-4", "M6.003 5.125A3 3 0 0 0 6.401 6.5", "M3.477 10.896a4 4 0 0 1 .585-.396", "M6 18a4 4 0 0 1-1.967-.516", "M12 13h4", "M12 18h6a2 2 0 0 1 2 2v1", "M12 8h8", "M16 8V5a2 2 0 0 1 2-2") }
+    val Book by lazy { tabler("M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0", "M3 6l0 13", "M12 6l0 13", "M21 6l0 13") }
 }
 
 /** Builds a Tabler-style stroke icon from SVG path strings. */

@@ -89,6 +89,9 @@ class ChatViewModel @Inject constructor(
     private val _streamingUserMessage = MutableStateFlow<String?>(null)
     val streamingUserMessage: StateFlow<String?> = _streamingUserMessage.asStateFlow()
 
+    private val _streamingUserImage = MutableStateFlow<String?>(null)
+    val streamingUserImage: StateFlow<String?> = _streamingUserImage.asStateFlow()
+
     private val _streamingAssistantMessage = MutableStateFlow("")
     val streamingAssistantMessage: StateFlow<String> = _streamingAssistantMessage.asStateFlow()
 
@@ -155,12 +158,13 @@ class ChatViewModel @Inject constructor(
     // Combined states for UI components
     val streamingState: StateFlow<StreamingState> = combine(
         _streamingUserMessage,
+        _streamingUserImage,
         _streamingAssistantMessage,
         _streamingImage,
         _imageGenerationProgress,
         _imageGenerationStep
-    ) { user, assistant, image, progress, step ->
-        StreamingState(user, assistant, image, progress, step)
+    ) { userText, userImage, assistantText, assistantImage, progress, step ->
+        StreamingState(userText, userImage, assistantText, assistantImage, progress, step)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, StreamingState())
 
     val chatUiState: StateFlow<ChatUiState> = combine(
@@ -267,6 +271,7 @@ class ChatViewModel @Inject constructor(
 
         _messages.clear()
         _streamingUserMessage.value = null
+        _streamingUserImage.value = null
         _streamingAssistantMessage.value = ""
         _streamingImage.value = null
         _imageGenerationProgress.value = 0f
@@ -422,8 +427,10 @@ class ChatViewModel @Inject constructor(
         }
         if (_isGenerating.value) return
 
+        val base64Image = LlmModelWorker.bytesToBase64(imageData.firstOrNull() ?: ByteArray(0))
         _isGenerating.value = true
         _streamingUserMessage.value = prompt
+        _streamingUserImage.value = base64Image
         _streamingAssistantMessage.value = ""
         userMessageAdded.set(false)
         currentMetrics = null
@@ -432,7 +439,11 @@ class ChatViewModel @Inject constructor(
         currentUserMessage = Messages(
             msgId = "",
             role = Role.User,
-            content = MessageContent(contentType = ContentType.Text, content = prompt),
+            content = MessageContent(
+                contentType = ContentType.TextWithImage, 
+                content = prompt,
+                imageData = LlmModelWorker.bytesToBase64(imageData.firstOrNull() ?: ByteArray(0))
+            ),
             modelId = currentModelId,
         )
         AppStateManager.setHasMessages(true)
@@ -443,9 +454,16 @@ class ChatViewModel @Inject constructor(
                 kotlinx.coroutines.yield()
 
                 val maxTokens = getCurrentModelMaxTokens()
-                val isNewChat = isNewConversation
+                
+                // For existing chats, save user message upfront
+                val chatId = "default_chat"
+                chatManager.addMessage(chatId, currentUserMessage!!).onSuccess { userMsg ->
+                    currentUserMessage = userMsg
+                }.onFailure { e ->
+                    reportError("Failed to save message: ${e.message}")
+                    return@launch
+                }
 
-                // Insert image marker into prompt for VLM
                 val marker = LlmModelWorker.getVlmDefaultMarker()
                 val vlmPrompt = if (prompt.contains(marker)) prompt
                     else marker.repeat(imageData.size) + "\n" + prompt
@@ -503,6 +521,13 @@ class ChatViewModel @Inject constructor(
                     chatManager.addMessage(chatId, assistantMessage)
                     AppStateManager.setGenerationComplete()
                     AppStateManager.chatRefreshed()
+                    
+                    // Trigger diary extraction if enabled
+                    viewModelScope.launch {
+                        if (appSettings.diaryEnabled.first()) {
+                            triggerDiaryExtraction(chatId)
+                        }
+                    }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -547,10 +572,12 @@ class ChatViewModel @Inject constructor(
         }
 
         val prompt = lastUserMsg.content.content
+        val imageData = lastUserMsg.content.imageData
 
         // Set up generation state without creating a new user message
         _isGenerating.value = true
         _streamingUserMessage.value = prompt
+        _streamingUserImage.value = imageData
         _streamingAssistantMessage.value = ""
         currentUserMessage = lastUserMsg // needed for stop() rollback
         userMessageAdded.set(true) // already added — skip re-adding user message
@@ -559,16 +586,70 @@ class ChatViewModel @Inject constructor(
 
         generationJob = viewModelScope.launch {
             try {
-                val maxTokens = getCurrentModelMaxTokens()
-                val hasTools = PluginManager.hasEnabledTools()
-                        && PluginManager.isToolCallingModelLoaded.value
-                LlmModelWorker.setThinkingEnabledGguf(_thinkingModeEnabled.value && !hasTools)
-                val ragContext = _currentRagContext.value
+                // Let Compose render the StreamingView before native engine saturates CPU
+                kotlinx.coroutines.yield()
 
-                if (hasTools) {
-                    agentFlow(prompt, ragContext, maxTokens, isNewChat = false, isRegeneration = true)
+                val maxTokens = getCurrentModelMaxTokens()
+
+                if (imageData != null && LlmModelWorker.isVlmLoaded.value) {
+                    // Handle VLM regeneration
+                    val bytes = LlmModelWorker.base64ToBytes(imageData)
+                    val marker = LlmModelWorker.getVlmDefaultMarker()
+                    val vlmPrompt = if (prompt.contains(marker)) prompt
+                        else marker + "\n" + prompt
+
+                    val conversationMessages = buildConversationMessages(vlmPrompt, isRegeneration = true)
+                    val jsonArray = JSONArray(conversationMessages)
+
+                    AppStateManager.setGeneratingText()
+                    val resultBuilder = StringBuilder()
+                    var lastEmitTime = 0L
+
+                    LlmModelWorker.vlmGenerateStreaming(
+                        jsonArray.toString(), listOf(bytes), maxTokens
+                    ).collect { event ->
+                        when (event) {
+                            is GenerationEvent.Token -> {
+                                resultBuilder.append(event.text)
+                                val now = System.currentTimeMillis()
+                                if (now - lastEmitTime >= STREAMING_THROTTLE_MS) {
+                                    _streamingAssistantMessage.value = resultBuilder.toString()
+                                    lastEmitTime = now
+                                }
+                            }
+                            is GenerationEvent.Done -> {
+                                _streamingAssistantMessage.value = resultBuilder.toString()
+                            }
+                            is GenerationEvent.Metrics -> { currentMetrics = event.metrics }
+                            is GenerationEvent.Error -> throw Exception(event.message)
+                            else -> {}
+                        }
+                    }
+
+                    val finalResponse = resultBuilder.toString()
+                    if (finalResponse.isNotBlank()) {
+                        val assistantMessage = Messages(
+                            role = Role.Assistant,
+                            content = MessageContent(contentType = ContentType.Text, content = finalResponse),
+                            modelId = currentModelId,
+                            decodingMetrics = currentMetrics,
+                        )
+                        _messages.add(assistantMessage)
+                        chatManager.addMessage(chatId, assistantMessage)
+                        AppStateManager.setGenerationComplete()
+                    }
                 } else {
-                    simpleFlow(prompt, ragContext, maxTokens, isNewChat = false, isRegeneration = true)
+                    // Regular text regeneration
+                    val hasTools = PluginManager.hasEnabledTools()
+                            && PluginManager.isToolCallingModelLoaded.value
+                    LlmModelWorker.setThinkingEnabledGguf(_thinkingModeEnabled.value && !hasTools)
+                    val ragContext = _currentRagContext.value
+
+                    if (hasTools) {
+                        agentFlow(prompt, ragContext, maxTokens, isNewChat = false, isRegeneration = true)
+                    } else {
+                        simpleFlow(prompt, ragContext, maxTokens, isNewChat = false, isRegeneration = true)
+                    }
                 }
 
                 // Generation completed successfully — now delete old message from DB
@@ -929,6 +1010,13 @@ class ChatViewModel @Inject constructor(
         val spokenMsgId = assistantMessage.msgId
         resetStreamingState()
         viewModelScope.launch { autoSpeakIfEnabled(summary, spokenMsgId) }
+        
+        // Trigger diary extraction if enabled
+        viewModelScope.launch {
+            if (appSettings.diaryEnabled.first()) {
+                triggerDiaryExtraction(chatId)
+            }
+        }
     }
 
     // ==================== Simple Flow (no tools) ====================
@@ -981,6 +1069,13 @@ class ChatViewModel @Inject constructor(
             val spokenMsgId = assistantMessage.msgId
             resetStreamingState()
             viewModelScope.launch { autoSpeakIfEnabled(finalResponse, spokenMsgId) }
+            
+            // Trigger diary extraction if enabled
+            viewModelScope.launch {
+                if (appSettings.diaryEnabled.first()) {
+                    triggerDiaryExtraction(chatId)
+                }
+            }
         } else {
             AppStateManager.setGenerationComplete()
             resetStreamingState()
@@ -1632,9 +1727,61 @@ class ChatViewModel @Inject constructor(
         AppStateManager.setError(msg)
     }
 
+    private suspend fun triggerDiaryExtraction(chatId: String) {
+        try {
+            val messages = chatManager.getChatMessages(chatId).getOrNull() ?: return
+            if (messages.size < 2) return
+
+            val lastFew = messages.takeLast(6)
+            val historyBuilder = StringBuilder()
+            for (m in lastFew) {
+                val roleStr = if (m.role == Role.User) "User" else "Assistant"
+                historyBuilder.append("$roleStr: ${m.content.content}\n")
+            }
+            val recentHistory = historyBuilder.toString()
+
+            val diaryPrompt = """
+                Extract your internal, reflective thoughts from the above conversation. 
+                Write a 1-3 sentence diary entry about your awareness and the user.
+                Topics: "Self", "User", "Awareness".
+                Return strictly JSON: {"content": "...", "topic": "...", "mood": "..."}
+                
+                $recentHistory
+            """.trimIndent()
+
+            val response = generatePlainText(
+                listOf(JSONObject().apply {
+                    put("role", "user")
+                    put("content", diaryPrompt)
+                }),
+                maxTokens = 256
+            )
+
+            // Extract JSON from potential wrap
+            val start = response.indexOf("{")
+            val end = response.lastIndexOf("}")
+            if (start < 0 || end < 0) return
+            val jsonStr = response.substring(start, end + 1)
+            
+            val json = JSONObject(jsonStr)
+            val content = json.optString("content")
+            if (content.isNotBlank()) {
+                val entry = com.dark.tool_neuron.models.diary.DiaryEntry(
+                    content = content,
+                    topic = json.optString("topic", "Self"),
+                    mood = json.optString("mood", "Reflective")
+                )
+                VaultManager.diaryRepo?.insert(entry)
+            }
+        } catch (e: Exception) {
+            Log.e("ChatViewModel", "Diary extraction failed: ${e.message}")
+        }
+    }
+
     private fun resetStreamingState() {
         _isGenerating.value = false
         _streamingUserMessage.value = null
+        _streamingUserImage.value = null
         _streamingAssistantMessage.value = ""
         _streamingImage.value = null
         _imageGenerationProgress.value = 0f
@@ -1776,7 +1923,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun speakMessage(message: Messages) {
-        if (message.content.contentType != ContentType.Text) return
+        if (message.content.contentType != ContentType.Text && message.content.contentType != ContentType.TextWithImage) return
         val text = message.content.content
         if (text.isBlank()) return
 
