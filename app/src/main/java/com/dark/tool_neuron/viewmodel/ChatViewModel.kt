@@ -394,6 +394,18 @@ class ChatViewModel @Inject constructor(
     // Keep old name as alias for backward compatibility with callers
     fun sendTextMessage(prompt: String) = sendChat(prompt)
 
+    fun pinMessageToVault(message: Messages) {
+        viewModelScope.launch {
+            chatManager.pinMessageToVault(message)
+                .onSuccess {
+                    Toast.makeText(appContext, "Message pinned to Vault", Toast.LENGTH_SHORT).show()
+                }
+                .onFailure { e ->
+                    reportError("Failed to pin message: ${e.message}")
+                }
+        }
+    }
+
     /**
      * Send a message with images (VLM). Requires a VLM projector to be loaded.
      * @param prompt User's text prompt

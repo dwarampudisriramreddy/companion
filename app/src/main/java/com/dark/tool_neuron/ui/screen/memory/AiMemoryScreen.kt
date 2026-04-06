@@ -187,10 +187,11 @@ fun AiMemoryScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (allMemories.isEmpty()) "No memories yet.\nChat with the AI and it will remember facts about you."
+                        text = if (allMemories.isEmpty()) "No memories or pinned items yet.\nPin messages or chat with the AI to populate your vault."
                         else "No memories match your search.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
             } else {
@@ -398,5 +399,6 @@ private fun categoryLabel(category: MemoryCategory): String {
         MemoryCategory.WORK -> "Work"
         MemoryCategory.INTEREST -> "Interest"
         MemoryCategory.GENERAL -> "General"
+        MemoryCategory.PINNED -> "Pinned"
     }
 }

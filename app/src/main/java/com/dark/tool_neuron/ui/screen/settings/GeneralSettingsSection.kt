@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -472,8 +473,8 @@ internal fun LazyListScope.aiMemorySection(
 
     item {
         SwitchRow(
-            title = "AI Memory",
-            description = "Remember facts about you across conversations",
+            title = "AI Memory & Vault",
+            description = "Remember facts and store pinned messages across conversations",
             checked = aiMemoryEnabled,
             onCheckedChange = { viewModel.setAiMemoryEnabled(it) }
         )
@@ -487,13 +488,22 @@ internal fun LazyListScope.aiMemorySection(
             color = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
             Column(modifier = Modifier.padding(Standards.SpacingLg)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        TnIcons.Vault,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(Standards.SpacingSm))
+                    Text(
+                        "View Vault & Memories",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 Text(
-                    "View Memories",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    "See, search, and manage what the AI remembers about you",
+                    "See, search, and manage what the AI remembers about you and your pinned items.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

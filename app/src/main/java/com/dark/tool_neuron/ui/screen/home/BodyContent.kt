@@ -57,6 +57,9 @@ fun BodyContent(
 
     val listState = rememberLazyListState()
 
+    var selectedMessage by remember { mutableStateOf<Messages?>(null) }
+    var showActionsSheet by remember { mutableStateOf(false) }
+
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty() && !chatState.isGenerating) {
             listState.animateScrollToItem(listState.layoutInfo.totalItemsCount - 1)
@@ -114,13 +117,19 @@ fun BodyContent(
                         when (message.role) {
                             Role.User -> {
                                 item(key = "${message.msgId}-user") {
-                                    UserMessageBubble(message)
+                                    UserMessageBubble(message, onLongClick = {
+                                        selectedMessage = message
+                                        showActionsSheet = true
+                                    })
                                 }
                             }
                             else -> {
                                 val isLastAssistant = index == lastAssistantIndex
                                 item(key = "${message.msgId}-bubble") {
-                                    AssistantMessageBubble(message) {
+                                    AssistantMessageBubble(message, onLongClick = {
+                                        selectedMessage = message
+                                        showActionsSheet = true
+                                    }) {
                                         Column {
                                             AssistantMessageHeader(message, imageBlurEnabled)
                                             if (message.content.contentType == ContentType.Text) {
@@ -135,19 +144,7 @@ fun BodyContent(
                                                     )
                                                 }
                                             }
-                                            AssistantMessageFooter(
-                                                message = message,
-                                                ttsPlayingMsgId = ttsPlayingMsgId,
-                                                ttsIsPlaying = ttsIsPlaying,
-                                                ttsSynthesizing = ttsSynthesizing,
-                                                ttsModelLoaded = ttsModelLoaded,
-                                                onSpeak = { chatViewModel.speakMessage(it) },
-                                                onStopTTS = { chatViewModel.stopTTS() },
-                                                onRegenerate = if (isLastAssistant) {
-                                                    { chatViewModel.regenerateLastMessage() }
-                                                } else null,
-                                                isRegenerateEnabled = !chatState.isGenerating
-                                            )
+                                            AssistantMessageFooter(message = message)
                                         }
                                     }
                                 }
@@ -162,13 +159,35 @@ fun BodyContent(
                     }
 
                     item {
-                        Spacer(modifier = Modifier.height(Standards.SpacingLg))
-                    }
-                }
-            }
-        }
+                        onSpeak: (Messages) -> Unit,
+                        onStopTTS: () -> Unit,
+                        onRegenerate: () -> Unit,
+                        onPin: (Messages) -> Unit,
+                        onDelete: (String) -> Unit,
+                        onDismiss: () -> Unit
+                        )
+                        }
 
-        AnimatedVisibility(
+                        if (showActionsSheet && selectedMessage != null) {
+                        val isLastAssistant = messages.indexOfLast { it.role == Role.Assistant && it.msgId == selectedMessage?.msgId } == messages.indexOfLast { it.role == Role.Assistant }
+
+                        MessageActionsBottomSheet(
+                        message = selectedMessage!!,
+                        ttsIsPlaying = ttsIsPlaying && ttsPlayingMsgId == selectedMessage?.msgId,
+                        ttsSynthesizing = ttsSynthesizing && ttsPlayingMsgId == selectedMessage?.msgId,
+                        ttsModelLoaded = ttsModelLoaded,
+                        isRegenerateEnabled = !chatState.isGenerating && isLastAssistant,
+                        onSpeak = { chatViewModel.speakMessage(it) },
+                        onStopTTS = { chatViewModel.stopTTS() },
+                        onRegenerate = { chatViewModel.regenerateLastMessage() },
+                        onPin = { chatViewModel.pinMessageToVault(it) },
+                        onDelete = { chatViewModel.deleteMessage(it) },
+                        onDismiss = { 
+                            showActionsSheet = false
+                            selectedMessage = null
+                        }
+                        )
+                        }        AnimatedVisibility(
             visible = config.showDynamicWindow,
             enter = fadeIn(Motion.entrance()),
             exit = fadeOut(Motion.exit())

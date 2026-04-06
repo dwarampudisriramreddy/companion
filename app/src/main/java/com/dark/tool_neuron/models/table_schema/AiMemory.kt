@@ -11,7 +11,8 @@ enum class MemoryCategory {
     PREFERENCE,
     WORK,
     INTEREST,
-    GENERAL
+    GENERAL,
+    PINNED
 }
 
 @Entity(

@@ -1,5 +1,7 @@
 package com.dark.tool_neuron.worker
 
+import com.dark.tool_neuron.models.table_schema.AiMemory
+import com.dark.tool_neuron.models.table_schema.MemoryCategory
 import com.dark.tool_neuron.data.VaultManager
 import com.dark.tool_neuron.models.messages.ContentType
 import com.dark.tool_neuron.models.messages.ImageGenerationMetrics
@@ -156,6 +158,18 @@ class ChatManager {
     suspend fun deleteChat(chatId: String): Result<Unit> = withContext(Dispatchers.IO) {
         withUmsReady {
             chatRepo.deleteChat(chatId)
+        }
+    }
+
+    suspend fun pinMessageToVault(message: Messages): Result<Unit> = withContext(Dispatchers.IO) {
+        withUmsReady {
+            val memory = AiMemory(
+                fact = message.content.content,
+                category = MemoryCategory.PINNED,
+                sourceChatId = null, // Or link to current chat if available
+                personaId = message.personaId
+            )
+            VaultManager.memoryRepo?.insert(memory) ?: throw IllegalStateException("Memory vault not ready")
         }
     }
 

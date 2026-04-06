@@ -3,9 +3,11 @@ package com.dark.tool_neuron.ui.screen.home
 import android.graphics.BitmapFactory
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,10 +41,12 @@ import java.util.*
 
 // ── BaseMessageBubble ──
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MessageBubble(
     isUser: Boolean,
     timestamp: Long? = null,
+    onLongClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     Row(
@@ -60,7 +64,12 @@ internal fun MessageBubble(
             shape = RoundedCornerShape(Standards.RadiusLg),
             color = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.widthIn(max = 300.dp),
+            modifier = Modifier
+                .widthIn(max = 300.dp)
+                .combinedClickable(
+                    onClick = { /* placeholder for future use */ },
+                    onLongClick = onLongClick
+                ),
             shadowElevation = 1.dp
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -82,8 +91,11 @@ internal fun MessageBubble(
 // ── UserMessageBubble ──
 
 @Composable
-internal fun UserMessageBubble(message: Messages) {
-    MessageBubble(isUser = true, timestamp = message.timestamp) {
+internal fun UserMessageBubble(
+    message: Messages,
+    onLongClick: (() -> Unit)? = null
+) {
+    MessageBubble(isUser = true, timestamp = message.timestamp, onLongClick = onLongClick) {
         SelectionContainer {
             MarkdownText(
                 text = message.content.content,
@@ -98,9 +110,10 @@ internal fun UserMessageBubble(message: Messages) {
 @Composable
 internal fun AssistantMessageBubble(
     message: Messages,
+    onLongClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
-    MessageBubble(isUser = false, timestamp = message.timestamp, content = content)
+    MessageBubble(isUser = false, timestamp = message.timestamp, onLongClick = onLongClick, content = content)
 }
 
 private fun formatTimestamp(timestamp: Long): String {
