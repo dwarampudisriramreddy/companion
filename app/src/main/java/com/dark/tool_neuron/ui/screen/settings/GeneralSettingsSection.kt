@@ -166,30 +166,115 @@ internal fun LazyListScope.llmSettingsSection(
     }
 
     item {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = Standards.SpacingSm),
-            verticalArrangement = Arrangement.spacedBy(Standards.SpacingSm)
-        ) {
+        SystemPromptRulesEditor(
+            systemPrompt = systemPrompt,
+            onUpdate = { viewModel.setSystemPrompt(it) }
+        )
+    }
+}
+
+@Composable
+private fun SystemPromptRulesEditor(
+    systemPrompt: String,
+    onUpdate: (String) -> Unit
+) {
+    var newRuleText by remember { mutableStateOf("") }
+    val rules = remember(systemPrompt) {
+        systemPrompt.split("\n").filter { it.isNotBlank() }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = Standards.SpacingSm),
+        verticalArrangement = Arrangement.spacedBy(Standards.SpacingSm)
+    ) {
+        Text(
+            text = "Global System Prompt Rules",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = "Define point-wise rules the model must follow. These rules are applied to all conversations.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // List of current rules
+        Column(verticalArrangement = Arrangement.spacedBy(Standards.SpacingXs)) {
+            rules.forEachIndexed { index, rule ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(Standards.RadiusMd),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = Standards.SpacingMd, vertical = Standards.SpacingSm),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Standards.SpacingSm)
+                    ) {
+                        Text(
+                            text = "${index + 1}.",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = rule,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = TnIcons.X,
+                            contentDescription = "Remove Rule",
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clickable {
+                                    val newRules = rules.toMutableList().apply { removeAt(index) }
+                                    onUpdate(newRules.joinToString("\n"))
+                                },
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Add new rule input
+        OutlinedTextField(
+            value = newRuleText,
+            onValueChange = { newRuleText = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Add a new rule...") },
+            trailingIcon = {
+                if (newRuleText.isNotBlank()) {
+                    IconButton(onClick = {
+                        val updated = if (systemPrompt.isBlank()) newRuleText 
+                                      else "$systemPrompt\n$newRuleText"
+                        onUpdate(updated)
+                        newRuleText = ""
+                    }) {
+                        Icon(
+                            imageVector = TnIcons.Plus,
+                            contentDescription = "Add Rule",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            },
+            maxLines = 3,
+            shape = RoundedCornerShape(Standards.RadiusMd),
+            textStyle = MaterialTheme.typography.bodyMedium
+        )
+        
+        if (rules.isEmpty()) {
             Text(
-                text = "Global System Prompt",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = "Rules the model must follow across all conversations. Overrides model-specific prompts.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            OutlinedTextField(
-                value = systemPrompt,
-                onValueChange = { viewModel.setSystemPrompt(it) },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("e.g. You are a helpful assistant...") },
-                minLines = 3,
-                maxLines = 10,
-                shape = RoundedCornerShape(Standards.RadiusMd)
+                text = "No rules defined. Add rules like 'Be concise' or 'Don't use emojis'.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                modifier = Modifier.padding(horizontal = Standards.SpacingXs)
             )
         }
     }

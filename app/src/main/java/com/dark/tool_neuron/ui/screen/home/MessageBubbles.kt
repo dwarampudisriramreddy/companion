@@ -37,55 +37,58 @@ import com.dark.tool_neuron.models.messages.Role
 import java.text.SimpleDateFormat
 import java.util.*
 
+// ── BaseMessageBubble ──
+
+@Composable
+internal fun MessageBubble(
+    isUser: Boolean,
+    timestamp: Long? = null,
+    content: @Composable () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = if (isUser) 64.dp else Standards.SpacingSm,
+                end = if (isUser) Standards.SpacingSm else 64.dp,
+                top = 4.dp,
+                bottom = 4.dp
+            ),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+    ) {
+        Surface(
+            shape = RoundedCornerShape(Standards.RadiusLg),
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.widthIn(max = 300.dp),
+            shadowElevation = 1.dp
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                content()
+
+                timestamp?.let { ts ->
+                    Text(
+                        text = formatTimestamp(ts),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        color = Color.Gray,
+                        modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
 // ── UserMessageBubble ──
 
 @Composable
 internal fun UserMessageBubble(message: Messages) {
-    val timestamp = remember(message.timestamp) { formatTimestamp(message.timestamp) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 64.dp, end = Standards.SpacingSm, top = 4.dp, bottom = 4.dp),
-        horizontalArrangement = Arrangement.End
-    ) {
-        Surface(
-            shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 2.dp,
-                bottomStart = 16.dp,
-                bottomEnd = 16.dp
-            ),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-            contentColor = Color.Black,
-            modifier = Modifier.widthIn(max = 300.dp)
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                SelectionContainer {
-                    MarkdownText(
-                        text = message.content.content,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.align(Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = timestamp,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = Color.Gray
-                    )
-                    Icon(
-                        imageVector = TnIcons.CircleCheck,
-                        contentDescription = "Read",
-                        modifier = Modifier.size(14.dp),
-                        tint = Color(0xFF34B7F1) // Blue ticks
-                    )
-                }
-            }
+    MessageBubble(isUser = true, timestamp = message.timestamp) {
+        SelectionContainer {
+            MarkdownText(
+                text = message.content.content,
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
         }
     }
 }
@@ -97,38 +100,7 @@ internal fun AssistantMessageBubble(
     message: Messages,
     content: @Composable () -> Unit
 ) {
-    val timestamp = remember(message.timestamp) { formatTimestamp(message.timestamp) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = Standards.SpacingSm, end = 64.dp, top = 4.dp, bottom = 4.dp),
-        horizontalArrangement = Arrangement.Start
-    ) {
-        Surface(
-            shape = RoundedCornerShape(
-                topStart = 2.dp,
-                topEnd = 16.dp,
-                bottomStart = 16.dp,
-                bottomEnd = 16.dp
-            ),
-            color = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.widthIn(max = 300.dp),
-            shadowElevation = 1.dp
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                content()
-
-                Text(
-                    text = timestamp,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = Color.Gray,
-                    modifier = Modifier.align(Alignment.End).padding(top = 2.dp)
-                )
-            }
-        }
-    }
+    MessageBubble(isUser = false, timestamp = message.timestamp, content = content)
 }
 
 private fun formatTimestamp(timestamp: Long): String {
@@ -141,7 +113,6 @@ private fun formatTimestamp(timestamp: Long): String {
 @Composable
 internal fun AssistantStreamingBubble(text: String, thinkingEnabled: Boolean = false) {
     // ── Typewriter effect ──
-    // Smoothly reveals text 2-4 chars per tick instead of chunky batch updates
     var revealedLen by remember { mutableIntStateOf(0) }
     val latestText by rememberUpdatedState(text)
 
@@ -151,56 +122,50 @@ internal fun AssistantStreamingBubble(text: String, thinkingEnabled: Boolean = f
             if (revealedLen < target) {
                 val behind = target - revealedLen
                 val step = when {
-                    behind > 20 -> 4   // far behind: catch up faster
+                    behind > 20 -> 4
                     behind > 8 -> 3
-                    else -> 2          // normal: gentle reveal
+                    else -> 2
                 }
                 revealedLen = minOf(revealedLen + step, target)
-                delay(33) // ~30 FPS — actively revealing
+                delay(33)
             } else {
-                delay(100) // idle — waiting for tokens, check less often
+                delay(100)
             }
         }
     }
 
     val displayed = if (revealedLen < text.length) text.substring(0, revealedLen) else text
 
-    // Only parse thinking tags when thinking mode is enabled — skip regex overhead otherwise
     val parsedMessage = if (thinkingEnabled) {
         remember(displayed) { parseThinkingTags(displayed) }
     } else {
         ParsedMessage(thinkingContent = null, actualContent = displayed)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = Standards.SpacingSm),
-        verticalArrangement = Arrangement.spacedBy(Standards.SpacingSm)
-    ) {
-        if (parsedMessage.thinkingContent != null) {
-            ThinkingBlock(
-                thinkingText = parsedMessage.thinkingContent,
-                isStreaming = parsedMessage.isThinkingInProgress
-            )
-        }
-
-        if (parsedMessage.actualContent.isNotEmpty()) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Standards.SpacingSm),
-                verticalAlignment = Alignment.Top
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
+    MessageBubble(isUser = false) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Standards.SpacingSm)
+        ) {
+            if (parsedMessage.thinkingContent != null) {
+                ThinkingBlock(
+                    thinkingText = parsedMessage.thinkingContent,
+                    isStreaming = parsedMessage.isThinkingInProgress
                 )
+            }
 
+            if (parsedMessage.actualContent.isNotEmpty()) {
                 Text(
-                    text = parsedMessage.actualContent.ifEmpty { "..." },
+                    text = parsedMessage.actualContent,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else if (parsedMessage.thinkingContent == null) {
+                Text(
+                    text = "...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -314,13 +279,11 @@ internal fun ThinkingBlock(
     thinkingText: String,
     isStreaming: Boolean = false
 ) {
-    // Auto-expand while streaming, auto-collapse when done
     var userToggled by remember { mutableStateOf(false) }
     var userExpandState by remember { mutableStateOf(false) }
 
     val isExpanded = if (userToggled) userExpandState else isStreaming
 
-    // Pulsing dot animation for streaming state
     val infiniteTransition = rememberInfiniteTransition(label = "thinkPulse")
     val pulseAlpha by infiniteTransition.animateFloat(
         initialValue = 0.4f,
@@ -333,7 +296,7 @@ internal fun ThinkingBlock(
     )
 
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Standards.SpacingMd),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
         shape = RoundedCornerShape(10.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         tonalElevation = 2.dp

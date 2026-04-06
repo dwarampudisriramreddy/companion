@@ -1211,6 +1211,7 @@ class ChatViewModel @Inject constructor(
      */
     private suspend fun getCurrentModelSystemPrompt(userQuery: String = ""): String {
         val basePrompt = getGgufModelSchema().inferenceParams.systemPrompt
+        val globalPrompt = appSettings.systemPrompt.first()
 
         val hasActiveTools = PluginManager.hasEnabledTools()
             && PluginManager.isToolCallingModelLoaded.value
@@ -1218,6 +1219,17 @@ class ChatViewModel @Inject constructor(
 
         return buildString {
             append(thinkingDirective)
+            
+            // Global prompt formatted as rules
+            if (globalPrompt.isNotEmpty()) {
+                append("\n\n### Global Rules:\n")
+                globalPrompt.split("\n")
+                    .filter { it.isNotBlank() }
+                    .forEach { rule ->
+                        append("- ").append(rule).append("\n")
+                    }
+            }
+
             if (basePrompt.isNotEmpty()) {
                 append("\n")
                 append(basePrompt)
