@@ -26,6 +26,7 @@ import com.dark.tool_neuron.models.messages.MessageContent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.dark.tool_neuron.models.messages.Messages
 import com.dark.tool_neuron.ui.components.ExpandCollapseIcon
 import com.dark.tool_neuron.ui.components.MarkdownText

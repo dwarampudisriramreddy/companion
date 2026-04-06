@@ -158,20 +158,20 @@ class ChatViewModel @Inject constructor(
 
     // Combined states for UI components
     val streamingState: StateFlow<StreamingState> = combine(
-        _streamingUserMessage,
-        _streamingUserImage,
-        _streamingAssistantMessage,
-        _streamingImage,
-        _imageGenerationProgress,
-        _imageGenerationStep
-    ) { args ->
+        combine(_streamingUserMessage, _streamingUserImage, _streamingAssistantMessage) { uMsg, uImg, aMsg ->
+            Triple(uMsg, uImg, aMsg)
+        },
+        combine(_streamingImage, _imageGenerationProgress, _imageGenerationStep) { img, prog, step ->
+            Triple(img, prog, step)
+        }
+    ) { u, a ->
         StreamingState(
-            userMessage = args[0] as String?,
-            userImage = args[1] as String?,
-            assistantMessage = args[2] as String,
-            image = args[3] as android.graphics.Bitmap?,
-            imageProgress = args[4] as Float,
-            imageStep = args[5] as String
+            userMessage = u.first,
+            userImage = u.second,
+            assistantMessage = u.third,
+            image = a.first,
+            imageProgress = a.second,
+            imageStep = a.third
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, StreamingState())
 
