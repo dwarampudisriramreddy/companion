@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -74,7 +75,7 @@ class MainActivity : ComponentActivity() {
         if (sessionStartTime > 0) {
             val elapsed = System.currentTimeMillis() - sessionStartTime
             sessionStartTime = 0
-            androidx.lifecycle.lifecycleScope.launch(Dispatchers.IO) {
+            lifecycleScope.launch(Dispatchers.IO) {
                 AppSettingsDataStore(applicationContext).addTimeSpent(elapsed)
             }
         }
@@ -350,8 +351,7 @@ fun AppNavigation(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onModelEditor = { navController.navigate(Screen.Editor.route) },
-                onAiMemoryClick = { navController.navigate(Screen.AiMemory.route) }
+                onModelEditor = { navController.navigate(Screen.Editor.route) }
             )
         }
 
