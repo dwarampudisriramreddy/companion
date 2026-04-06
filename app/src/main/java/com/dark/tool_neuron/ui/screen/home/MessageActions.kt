@@ -72,9 +72,7 @@ internal fun AssistantMessageHeader(message: Messages, imageBlurEnabled: Boolean
 
         // Plugin Results
         if (message.content.contentType == ContentType.PluginResult) {
-            message.content.pluginResultData?.let { data ->
-                PluginResultCard(data = data)
-            }
+            PluginResultCard(message = message)
         }
     }
 }

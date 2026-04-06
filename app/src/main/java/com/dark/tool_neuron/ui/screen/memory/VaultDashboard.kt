@@ -111,7 +111,7 @@ fun VaultDashboard(onNavigateBack: () -> Unit) {
                 ) {
                     QuickStatChip(
                         label = "Chats",
-                        value = "${viewModel.chatList.size}",
+                        value = "${dedupedChats.size}",
                         modifier = Modifier.weight(1f)
                     )
                     QuickStatChip(
@@ -154,7 +154,7 @@ fun VaultDashboard(onNavigateBack: () -> Unit) {
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        "${viewModel.chatList.size} total",
+                        "${dedupedChats.size} total",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

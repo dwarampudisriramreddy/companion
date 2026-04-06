@@ -27,16 +27,31 @@ class VaultManagementViewModel : ViewModel() {
     var chatList by mutableStateOf<List<ChatInfo>>(emptyList())
         private set
 
+    private var activeLoads = 0
+
+    private fun startLoading() {
+        activeLoads++
+        isLoading = true
+    }
+
+    private fun endLoading() {
+        activeLoads--
+        if (activeLoads <= 0) {
+            activeLoads = 0
+            isLoading = false
+        }
+    }
+
     fun loadVaultStats() {
         viewModelScope.launch {
             try {
-                isLoading = true
+                startLoading()
                 val chatRepo = VaultManager.chatRepo ?: return@launch
                 vaultStats = chatRepo.getVaultStats()
             } catch (e: Exception) {
                 Log.e("VaultManagementVM", "Failed to load vault stats", e)
             } finally {
-                isLoading = false
+                endLoading()
             }
         }
     }
@@ -44,13 +59,13 @@ class VaultManagementViewModel : ViewModel() {
     fun loadChatList() {
         viewModelScope.launch {
             try {
-                isLoading = true
+                startLoading()
                 val chatRepo = VaultManager.chatRepo ?: return@launch
                 chatList = chatRepo.getAllChats()
             } catch (e: Exception) {
                 Log.e("VaultManagementVM", "Failed to load chats", e)
             } finally {
-                isLoading = false
+                endLoading()
             }
         }
     }

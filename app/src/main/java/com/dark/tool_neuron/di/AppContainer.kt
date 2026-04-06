@@ -105,4 +105,9 @@ object AppContainer {
         return VaultManager.memoryRepo ?: error("VaultManager not initialized — cannot access MemoryRepository")
     }
 
+    fun getChatRepo(): com.dark.tool_neuron.repo.ums.UmsChatRepository {
+        if (VaultManager.chatRepo == null) ensureVaultInitialized()
+        return VaultManager.chatRepo ?: error("VaultManager not initialized — cannot access ChatRepository")
+    }
+
 }

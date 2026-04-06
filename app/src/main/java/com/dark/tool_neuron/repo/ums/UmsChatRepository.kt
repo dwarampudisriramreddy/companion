@@ -37,15 +37,17 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
         ums.addIndex(msgCollection, Tags.Message.CHAT_ID, UnifiedMemorySystem.WIRE_BYTES)
     }
 
-    suspend fun createChat(title: String = "New Chat"): String = withContext(Dispatchers.IO) {
-        val chatId = UUID.randomUUID().toString()
+    suspend fun createChat(id: String? = null, title: String = "New Chat"): String = withContext(Dispatchers.IO) {
+        val chatId = id ?: UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
+        val existing = ums.queryString(chatCollection, Tags.Chat.CHAT_ID, chatId).firstOrNull()
         val record = UmsRecord.create()
+            .id(existing?.id ?: 0)
             .putString(Tags.Chat.CHAT_ID, chatId)
-            .putTimestamp(Tags.Chat.CREATED_AT, now)
+            .putTimestamp(Tags.Chat.CREATED_AT, existing?.getTimestamp(Tags.Chat.CREATED_AT) ?: now)
             .putString(Tags.Chat.TITLE, title)
-            .putTimestamp(Tags.Chat.LAST_MESSAGE_AT, now)
-            .putInt(Tags.Chat.MESSAGE_COUNT, 0)
+            .putTimestamp(Tags.Chat.LAST_MESSAGE_AT, existing?.getTimestamp(Tags.Chat.LAST_MESSAGE_AT) ?: now)
+            .putInt(Tags.Chat.MESSAGE_COUNT, existing?.getInt(Tags.Chat.MESSAGE_COUNT) ?: 0)
             .build()
         ums.put(chatCollection, record)
         chatId
@@ -54,6 +56,7 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
     suspend fun getAllChats(): List<ChatInfo> = withContext(Dispatchers.IO) {
         ums.getAll(chatCollection).map { it.toChatInfo() }
             .sortedByDescending { it.lastMessageTime ?: it.createdAt }
+            .distinctBy { it.chatId }
     }
 
     suspend fun deleteChat(chatId: String) = withContext(Dispatchers.IO) {
@@ -62,14 +65,13 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
         messages.forEach { ums.delete(msgCollection, it.id) }
 
         // Delete chat
-        val chatRecord = ums.queryString(chatCollection, Tags.Chat.CHAT_ID, chatId).firstOrNull()
-        if (chatRecord != null) {
-            ums.delete(chatCollection, chatRecord.id)
-        }
+        val chatRecords = ums.queryString(chatCollection, Tags.Chat.CHAT_ID, chatId)
+        chatRecords.forEach { ums.delete(chatCollection, it.id) }
     }
 
     suspend fun addMessage(chatId: String, message: Messages) = withContext(Dispatchers.IO) {
-        ums.put(msgCollection, message.toRecord(chatId))
+        val existing = ums.queryString(msgCollection, Tags.Message.MSG_ID, message.msgId).firstOrNull()
+        ums.put(msgCollection, message.toRecord(chatId, existing?.id ?: 0))
         updateChatStats(chatId)
     }
 
@@ -94,6 +96,7 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
     suspend fun getMessagesForChat(chatId: String, limit: Int = 1000): List<Messages> = withContext(Dispatchers.IO) {
         ums.queryString(msgCollection, Tags.Message.CHAT_ID, chatId)
             .map { it.toMessages() }
+            .distinctBy { it.msgId }
             .sortedBy { it.timestamp }
             .takeLast(limit)
     }
@@ -101,6 +104,7 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
     private suspend fun updateChatStats(chatId: String) {
         val chatRecord = ums.queryString(chatCollection, Tags.Chat.CHAT_ID, chatId).firstOrNull() ?: return
         val messages = ums.queryString(msgCollection, Tags.Message.CHAT_ID, chatId)
+            .distinctBy { it.getString(Tags.Message.MSG_ID) }
         val count = messages.size
         val lastMsg = messages.maxByOrNull { it.getTimestamp(Tags.Message.TIMESTAMP) ?: 0L }
         val lastTime = lastMsg?.getTimestamp(Tags.Message.TIMESTAMP) ?: chatRecord.getTimestamp(Tags.Chat.CREATED_AT) ?: System.currentTimeMillis()
@@ -154,8 +158,8 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
         val allChats = ums.getAll(chatCollection)
         val allMessages = ums.getAll(msgCollection)
         
-        val totalChats = allChats.size
-        val totalMessages = allMessages.size
+        val totalChats = allChats.distinctBy { it.getString(Tags.Chat.CHAT_ID) }.size
+        val totalMessages = allMessages.distinctBy { it.getString(Tags.Message.MSG_ID) }.size
         
         val oldest = allMessages.minByOrNull { it.getTimestamp(Tags.Message.TIMESTAMP) ?: Long.MAX_VALUE }
             ?.getTimestamp(Tags.Message.TIMESTAMP) ?: 0L
