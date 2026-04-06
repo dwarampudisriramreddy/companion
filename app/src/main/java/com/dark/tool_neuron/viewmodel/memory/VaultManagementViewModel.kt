@@ -1,18 +1,29 @@
 package com.dark.tool_neuron.viewmodel.memory
 
+import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.dark.tool_neuron.data.AppSettingsDataStore
 import com.dark.tool_neuron.data.VaultManager
 import com.dark.tool_neuron.models.vault.ChatInfo
 import com.dark.tool_neuron.models.vault.VaultStatistics
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class VaultManagementViewModel : ViewModel() {
+class VaultManagementViewModel(application: Application) : AndroidViewModel(application) {
+    private val appSettings = AppSettingsDataStore(application)
+
     var vaultStats by mutableStateOf<VaultStatistics?>(null)
+        private set
+
+    var appOpenCount by mutableStateOf(0)
+        private set
+
+    var totalTimeSpentMs by mutableStateOf(0L)
         private set
 
     var isLoading by mutableStateOf(false)
@@ -48,6 +59,10 @@ class VaultManagementViewModel : ViewModel() {
                 startLoading()
                 val chatRepo = VaultManager.chatRepo ?: return@launch
                 vaultStats = chatRepo.getVaultStats()
+
+                // Load app usage metrics
+                appOpenCount = appSettings.appOpenCount.first()
+                totalTimeSpentMs = appSettings.totalTimeSpentMs.first()
             } catch (e: Exception) {
                 Log.e("VaultManagementVM", "Failed to load vault stats", e)
             } finally {

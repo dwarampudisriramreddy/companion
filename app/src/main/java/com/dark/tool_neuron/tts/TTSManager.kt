@@ -114,6 +114,7 @@ object TTSManager {
                     useNNAPI = settings.useNNAPI
                 )
 
+                Log.d(TAG, "Starting TTS speak for text: ${text.take(20)}...")
                 engine.speak(text, config, object : TTSCallback {
                     override fun onSynthesisStart(textLength: Int, chunkCount: Int) {
                         Log.d(TAG, "Synthesis started: $textLength chars, $chunkCount chunks")
@@ -129,7 +130,17 @@ object TTSManager {
                     override fun onAudioReady(result: SynthesisResult) {
                         _isSynthesizing.value = false
                         _synthProgress.value = 1f
+                        // We keep _isPlaying as true until playback is finished or stopped.
+                        // Since there's no onPlaybackFinished, we keep it true for now.
+                        // Actually, many engines call onAudioReady when playback finishes too.
+                        // For Supertonic, if onAudioReady means synthesis done, we might need a delay
+                        // or just set isPlaying = false here if it's sync with playback.
                         Log.d(TAG, "Audio ready: ${result.durationMs}ms, RTF=${result.realtimeFactor}")
+                        
+                        // If result duration is provided, we can assume it's playing.
+                        // We'll reset isPlaying here for now to avoid it getting stuck.
+                        _isPlaying.value = false
+                        _currentPlayingMsgId.value = null
                     }
 
                     override fun onError(error: String) {
@@ -142,7 +153,6 @@ object TTSManager {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error during TTS speak", e)
-        } finally {
             _isPlaying.value = false
             _currentPlayingMsgId.value = null
             _isSynthesizing.value = false

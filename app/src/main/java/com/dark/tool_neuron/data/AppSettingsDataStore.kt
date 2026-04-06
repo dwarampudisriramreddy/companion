@@ -35,6 +35,30 @@ class AppSettingsDataStore(private val context: Context) {
         private val PERFORMANCE_MODE = stringPreferencesKey("performance_mode")
         private val ASK_MODEL_RELOAD_DIALOG = booleanPreferencesKey("ask_model_reload_dialog")
         private val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
+        private val APP_OPEN_COUNT = androidx.datastore.preferences.core.intPreferencesKey("app_open_count")
+        private val TIME_SPENT_MS = androidx.datastore.preferences.core.longPreferencesKey("time_spent_ms")
+    }
+
+    val appOpenCount: Flow<Int> = context.appSettingsDataStore.data.map { prefs ->
+        prefs[APP_OPEN_COUNT] ?: 0
+    }
+
+    suspend fun incrementAppOpenCount() {
+        context.appSettingsDataStore.edit { prefs ->
+            val current = prefs[APP_OPEN_COUNT] ?: 0
+            prefs[APP_OPEN_COUNT] = current + 1
+        }
+    }
+
+    val totalTimeSpentMs: Flow<Long> = context.appSettingsDataStore.data.map { prefs ->
+        prefs[TIME_SPENT_MS] ?: 0L
+    }
+
+    suspend fun addTimeSpent(ms: Long) {
+        context.appSettingsDataStore.edit { prefs ->
+            val current = prefs[TIME_SPENT_MS] ?: 0L
+            prefs[TIME_SPENT_MS] = current + ms
+        }
     }
 
     val systemPrompt: Flow<String> = context.appSettingsDataStore.data.map { prefs ->

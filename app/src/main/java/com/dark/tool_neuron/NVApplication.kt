@@ -55,6 +55,15 @@ class NVApplication : Application() {
         TTSManager.init(applicationContext, autoLoad = false)
         Log.d(TAG, "TTSManager initialized")
 
+        // Track app open count
+        appScope.launch {
+            try {
+                AppSettingsDataStore(applicationContext).incrementAppOpenCount()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to increment app open count", e)
+            }
+        }
+
         // Run data integrity check after UMS is ready (deferred to let UI render first)
         appScope.launch {
             delay(2000) // Let Activity.onCreate + first frame complete before scanning

@@ -132,6 +132,13 @@ class ChatViewModel @Inject constructor(
     private val _currentRagResults = MutableStateFlow<List<RagResultItem>>(emptyList())
     val currentRagResults: StateFlow<List<RagResultItem>> = _currentRagResults.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            val lastId = appSettings.lastChatId.first() ?: "default_chat"
+            loadChat(lastId)
+        }
+    }
+
     private val _currentGenerationType = MutableStateFlow(ModelType.TEXT_GENERATION)
     val currentGenerationType: StateFlow<ModelType> = _currentGenerationType.asStateFlow()
 
@@ -274,6 +281,8 @@ class ChatViewModel @Inject constructor(
 
         // Clear database for single chat mode
         viewModelScope.launch {
+            _currentChatId.value = "default_chat"
+            appSettings.saveLastChatId("default_chat")
             chatManager.deleteChat("default_chat")
         }
 
@@ -305,6 +314,7 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _currentChatId.value = chatId
+                appSettings.saveLastChatId(chatId)
                 chatManager.getChatMessages(chatId).onSuccess { loadedMessages ->
                     _messages.clear()
                     _messages.addAll(loadedMessages)
@@ -1915,6 +1925,14 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun autoSpeakIfEnabled(text: String, msgId: String? = null) {
         if (text.isBlank()) return
+        
+        // Clean text from thinking tags
+        val cleanText = if (THINK_TAG_REGEX.containsMatchIn(text)) {
+            text.replace(THINK_TAG_REGEX, "").trim()
+        } else text
+        
+        if (cleanText.isBlank()) return
+
         val settings = ttsDataStore.settings.first()
         if (!settings.autoSpeak) return
 
@@ -1926,12 +1944,19 @@ class ChatViewModel @Inject constructor(
             if (!TTSManager.isLoaded()) return
         }
 
-        TTSManager.speak(text = text, settings = settings, msgId = msgId)
+        TTSManager.speak(text = cleanText, settings = settings, msgId = msgId)
     }
 
     fun speakMessage(message: Messages) {
         if (message.content.contentType != ContentType.Text && message.content.contentType != ContentType.TextWithImage) return
-        val text = message.content.content
+        val rawText = message.content.content
+        if (rawText.isBlank()) return
+
+        // Clean text from thinking tags
+        val text = if (THINK_TAG_REGEX.containsMatchIn(rawText)) {
+            rawText.replace(THINK_TAG_REGEX, "").trim()
+        } else rawText
+        
         if (text.isBlank()) return
 
         viewModelScope.launch {
@@ -2077,5 +2102,10 @@ class ChatViewModel @Inject constructor(
         private const val REPETITION_MIN_PATTERN_LEN = 30
         private const val REPETITION_MIN_REPEATS = 4
         private const val REPETITION_MAX_CHECK_LEN = 800
+
+        private val THINK_TAG_REGEX = Regex(
+            "<think>(.*?)</think>|\\[THINK](.*?)\\[/THINK]|<reasoning>(.*?)</reasoning>",
+            RegexOption.DOT_MATCHES_ALL
+        )
     }
 }

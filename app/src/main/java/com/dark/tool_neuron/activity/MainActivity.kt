@@ -62,6 +62,24 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var ragRepository: com.dark.tool_neuron.repo.RagRepository
 
+    private var sessionStartTime: Long = 0
+
+    override fun onResume() {
+        super.onResume()
+        sessionStartTime = System.currentTimeMillis()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (sessionStartTime > 0) {
+            val elapsed = System.currentTimeMillis() - sessionStartTime
+            sessionStartTime = 0
+            androidx.lifecycle.lifecycleScope.launch(Dispatchers.IO) {
+                AppSettingsDataStore(applicationContext).addTimeSpent(elapsed)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -340,7 +358,8 @@ fun AppNavigation(
         composable(Screen.VaultManager.route) {
             VaultDashboard(
                 onNavigateBack = { navController.popBackStack() },
-                onDiaryClick = { navController.navigate(Screen.Diary.route) }
+                onDiaryClick = { navController.navigate(Screen.Diary.route) },
+                onAiMemoryClick = { navController.navigate(Screen.AiMemory.route) }
             )
         }
 

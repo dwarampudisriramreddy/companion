@@ -48,7 +48,8 @@ import com.dark.tool_neuron.global.Standards
 @Composable
 fun VaultDashboard(
     onNavigateBack: () -> Unit,
-    onDiaryClick: () -> Unit = {}
+    onDiaryClick: () -> Unit = {},
+    onAiMemoryClick: () -> Unit = {}
 ) {
     val viewModel: VaultManagementViewModel = viewModel()
     var showLogs by remember { mutableStateOf(false) }
@@ -113,9 +114,14 @@ fun VaultDashboard(
                     horizontalArrangement = Arrangement.spacedBy(Standards.SpacingSm)
                 ) {
                     QuickStatChip(
-                        label = "Chats",
-                        value = "${dedupedChats.size}",
+                        label = "App Opens",
+                        value = "${viewModel.appOpenCount}",
                         modifier = Modifier.weight(1f)
+                    )
+                    QuickStatChip(
+                        label = "Time Spent",
+                        value = formatTimeSpent(viewModel.totalTimeSpentMs),
+                        modifier = Modifier.weight(1.2f)
                     )
                     QuickStatChip(
                         label = "Messages",
@@ -206,6 +212,17 @@ fun VaultDashboard(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = Standards.SpacingLg)
+                )
+            }
+
+            // AI Memories
+            item {
+                ToolActionCard(
+                    title = "AI Memories",
+                    description = "View and manage all extracted memories and pinned facts",
+                    icon = TnIcons.Vault,
+                    onClick = onAiMemoryClick,
                     modifier = Modifier.padding(horizontal = Standards.SpacingLg)
                 )
             }
@@ -409,5 +426,16 @@ private fun ToolActionCard(
                 )
             }
         }
+    }
+}
+
+private fun formatTimeSpent(ms: Long): String {
+    val totalMinutes = ms / (1000 * 60)
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m"
+        else -> "${minutes}m"
     }
 }

@@ -465,7 +465,6 @@ internal fun LazyListScope.modelConfigurationSection(
 internal fun LazyListScope.aiMemorySection(
     aiMemoryEnabled: Boolean,
     diaryEnabled: Boolean,
-    onAiMemoryClick: () -> Unit,
     viewModel: SettingsViewModel
 ) {
     item { Spacer(Modifier.height(Standards.SpacingSm)) }
@@ -488,37 +487,6 @@ internal fun LazyListScope.aiMemorySection(
             checked = diaryEnabled,
             onCheckedChange = { viewModel.setDiaryEnabled(it) }
         )
-    }
-
-    item {
-        Surface(
-            onClick = onAiMemoryClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(Standards.RadiusMd),
-            color = MaterialTheme.colorScheme.surfaceContainerLow
-        ) {
-            Column(modifier = Modifier.padding(Standards.SpacingLg)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        TnIcons.Vault,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(Standards.SpacingSm))
-                    Text(
-                        "View Vault & Memories",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                Text(
-                    "See, search, and manage what the AI remembers about you and your pinned items.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }
 

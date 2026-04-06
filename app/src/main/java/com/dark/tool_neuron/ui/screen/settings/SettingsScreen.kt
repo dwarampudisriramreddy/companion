@@ -34,7 +34,6 @@ import com.dark.tool_neuron.viewmodel.SettingsViewModel
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onModelEditor: () -> Unit = {},
-    onAiMemoryClick: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel()
 ) {
     // App settings
@@ -148,7 +147,6 @@ fun SettingsScreen(
             aiMemorySection(
                 aiMemoryEnabled = aiMemoryEnabled,
                 diaryEnabled = diaryEnabled,
-                onAiMemoryClick = onAiMemoryClick,
                 viewModel = viewModel
             )
 
