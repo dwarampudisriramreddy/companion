@@ -255,7 +255,7 @@ The nonce is randomly generated per encryption call and prepended to the output.
 | Problem | Solution |
 |---------|----------|
 | `FATAL_ERROR: TN_SIGNING_PUBLIC_KEY is not set` | Add `tn.signing.public_key=<hex>` to `local.properties` |
-| BoringSSL download fails | Check internet. FetchContent clones from `boringssl.googlesource.com` |
+| BoringSSL download fails | Check internet. FetchContent clones from `github.com/google/boringssl.git` |
 | `Go not found` from BoringSSL | Already handled — `-DOPENSSL_NO_ASM=1` skips Go-dependent assembly |
 | Stale CMake cache | Delete `system_encryptor/.cxx/` and rebuild |
 | IDE red squiggles in C++ | Normal — clangd doesn't resolve BoringSSL includes. NDK build works fine. |

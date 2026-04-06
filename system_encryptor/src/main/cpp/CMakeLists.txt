@@ -25,7 +25,7 @@ add_link_options($<$<NOT:$<CONFIG:Debug>>:-flto>)
 include(FetchContent)
 FetchContent_Declare(
     boringssl
-    GIT_REPOSITORY https://boringssl.googlesource.com/boringssl
+    GIT_REPOSITORY https://github.com/google/boringssl.git
     GIT_TAG 617634bc015344093f5ea0b0a5b653c924cfa20d
 )
 
