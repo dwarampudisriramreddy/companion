@@ -1,6 +1,7 @@
 package com.dark.tool_neuron.ui.screen.home
 
 import android.content.ClipData
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,19 +12,14 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import com.dark.tool_neuron.models.messages.ContentType
 import com.dark.tool_neuron.models.messages.Messages
-import com.dark.tool_neuron.models.ui.ActionIcon
-import com.dark.tool_neuron.models.ui.ActionItem
+import com.dark.tool_neuron.models.messages.Role
 import com.dark.tool_neuron.ui.components.AgentExecutionView
-import com.dark.tool_neuron.ui.components.MultiActionButton
 import com.dark.tool_neuron.ui.components.PluginResultCard
 import com.dark.tool_neuron.ui.components.ToolChainDisplay
 import com.dark.tool_neuron.ui.icons.TnIcons
 import com.dark.tool_neuron.viewmodel.AgentPhase
 import kotlinx.coroutines.launch
 import com.dark.tool_neuron.global.Standards
-
-import androidx.compose.ui.text.font.FontStyle
-import com.dark.tool_neuron.models.messages.Role
 
 // ── AssistantMessageHeader ──
 
@@ -55,40 +51,31 @@ internal fun AssistantMessageHeader(message: Messages, imageBlurEnabled: Boolean
                 phase = AgentPhase.Complete
             )
         } else if (hasToolChainSteps) {
-            message.toolChainSteps?.let { steps ->
-                ToolChainDisplay(steps = steps, isLive = false)
+            ToolChainDisplay(steps = message.toolChainSteps!!)
+        }
+
+        // Thinking Block (if not in Plan/Summary format)
+        if (message.agentPlan == null && message.content.contentType == ContentType.Text) {
+            val thinkingContent = remember(message.content.content) {
+                val match = THINK_TAG_REGEX.find(message.content.content)
+                match?.groupValues?.find { it.isNotEmpty() }
+            }
+            thinkingContent?.let {
+                ThinkingBlock(thinkingText = it, isStreaming = false)
             }
         }
 
-        // Non-text content types
-        when (message.content.contentType) {
-            ContentType.Image -> ImageMessageBubble(message, imageBlurEnabled)
-            ContentType.PluginResult -> PluginResultCard(message = message)
-            else -> {}
+        // Image content
+        if (message.content.contentType == ContentType.Image || message.content.contentType == ContentType.TextWithImage) {
+            ImageMessageBubble(message, imageBlurEnabled)
         }
-    }
-}
 
-// ── ActionWordsDisplay ──
-
-@Composable
-internal fun ActionWordsDisplay(message: Messages) {
-    val actionText = remember(message) {
-        when {
-            message.agentPlan != null -> "* Thinking & Tool Execution *"
-            message.ragResults?.isNotEmpty() == true -> "* Researching Context *"
-            THINK_TAG_REGEX.containsMatchIn(message.content.content) -> "* Thought Process *"
-            else -> null
+        // Plugin Results
+        if (message.content.contentType == ContentType.PluginResult) {
+            message.content.pluginResultData?.let { data ->
+                PluginResultCard(data = data)
+            }
         }
-    }
-
-    actionText?.let {
-        Text(
-            text = it,
-            style = MaterialTheme.typography.labelSmall.copy(fontStyle = FontStyle.Italic),
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            modifier = Modifier.padding(horizontal = Standards.SpacingMd)
-        )
     }
 }
 
@@ -167,7 +154,9 @@ internal fun MessageActionsBottomSheet(
                     headlineContent = { Text("Copy Text") },
                     leadingContent = { Icon(TnIcons.Copy, contentDescription = null) },
                     modifier = Modifier.clickable {
-                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("message", textContent)))
+                        scope.launch {
+                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("message", textContent)))
+                        }
                         onDismiss()
                     }
                 )
@@ -225,4 +214,14 @@ internal fun MessageActionsBottomSheet(
             )
         }
     }
+}
+
+@Composable
+internal fun ActionWordsDisplay(message: Messages) {
+    // Placeholder for metrics display or action-related text if needed
+}
+
+@Composable
+internal fun SavedRagResultsDisplay(results: List<com.dark.tool_neuron.models.messages.RagResultItem>) {
+    // Implementation for displaying RAG results
 }

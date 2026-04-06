@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dark.tool_neuron.models.ModelType
 import com.dark.tool_neuron.models.messages.ContentType
+import com.dark.tool_neuron.models.messages.Messages
 import com.dark.tool_neuron.models.messages.Role
 import com.dark.tool_neuron.ui.components.MarkdownText
 import com.dark.tool_neuron.ui.theme.Motion
@@ -159,35 +160,34 @@ fun BodyContent(
                     }
 
                     item {
-                        onSpeak: (Messages) -> Unit,
-                        onStopTTS: () -> Unit,
-                        onRegenerate: () -> Unit,
-                        onPin: (Messages) -> Unit,
-                        onDelete: (String) -> Unit,
-                        onDismiss: () -> Unit
-                        )
-                        }
+                        Spacer(modifier = Modifier.height(Standards.SpacingLg))
+                    }
+                }
+            }
+        }
 
-                        if (showActionsSheet && selectedMessage != null) {
-                        val isLastAssistant = messages.indexOfLast { it.role == Role.Assistant && it.msgId == selectedMessage?.msgId } == messages.indexOfLast { it.role == Role.Assistant }
+        if (showActionsSheet && selectedMessage != null) {
+            val isLastAssistant = messages.indexOfLast { it.role == Role.Assistant && it.msgId == selectedMessage?.msgId } == messages.indexOfLast { it.role == Role.Assistant }
+            
+            MessageActionsBottomSheet(
+                message = selectedMessage!!,
+                ttsIsPlaying = ttsIsPlaying && ttsPlayingMsgId == selectedMessage?.msgId,
+                ttsSynthesizing = ttsSynthesizing && ttsPlayingMsgId == selectedMessage?.msgId,
+                ttsModelLoaded = ttsModelLoaded,
+                isRegenerateEnabled = !chatState.isGenerating && isLastAssistant,
+                onSpeak = { chatViewModel.speakMessage(it) },
+                onStopTTS = { chatViewModel.stopTTS() },
+                onRegenerate = { chatViewModel.regenerateLastMessage() },
+                onPin = { chatViewModel.pinMessageToVault(it) },
+                onDelete = { chatViewModel.deleteMessage(it) },
+                onDismiss = { 
+                    showActionsSheet = false
+                    selectedMessage = null
+                }
+            )
+        }
 
-                        MessageActionsBottomSheet(
-                        message = selectedMessage!!,
-                        ttsIsPlaying = ttsIsPlaying && ttsPlayingMsgId == selectedMessage?.msgId,
-                        ttsSynthesizing = ttsSynthesizing && ttsPlayingMsgId == selectedMessage?.msgId,
-                        ttsModelLoaded = ttsModelLoaded,
-                        isRegenerateEnabled = !chatState.isGenerating && isLastAssistant,
-                        onSpeak = { chatViewModel.speakMessage(it) },
-                        onStopTTS = { chatViewModel.stopTTS() },
-                        onRegenerate = { chatViewModel.regenerateLastMessage() },
-                        onPin = { chatViewModel.pinMessageToVault(it) },
-                        onDelete = { chatViewModel.deleteMessage(it) },
-                        onDismiss = { 
-                            showActionsSheet = false
-                            selectedMessage = null
-                        }
-                        )
-                        }        AnimatedVisibility(
+        AnimatedVisibility(
             visible = config.showDynamicWindow,
             enter = fadeIn(Motion.entrance()),
             exit = fadeOut(Motion.exit())
