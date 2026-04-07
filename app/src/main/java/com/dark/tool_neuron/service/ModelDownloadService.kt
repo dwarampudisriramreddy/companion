@@ -54,6 +54,7 @@ class ModelDownloadService : Service() {
         .readTimeout(30, TimeUnit.SECONDS).build()
 
     companion object {
+        private const val TAG = "ModelDownloadService"
         private const val NOTIFICATION_CHANNEL_ID = "model_download_channel"
         private const val NOTIFICATION_ID = 3001
 
