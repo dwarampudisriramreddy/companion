@@ -273,6 +273,7 @@ internal fun ModelDetailsDialog(
                     ProviderType.DIFFUSION -> "Stable Diffusion"
                     ProviderType.GGUF -> "GGUF (LLM)"
                     ProviderType.TTS -> "Text-to-Speech"
+                    ProviderType.VLM_PROJECTOR -> "Vision Projector"
                 }
                 DetailRow("Type", typeLabel)
                 DetailRow("Status", if (model.isActive) "Active" else "Inactive")
@@ -348,6 +349,16 @@ internal fun ModelDetailsDialog(
                             DetailRow("Top K", "${schema.inferenceParams.topK}")
                             DetailRow("Top P", "${schema.inferenceParams.topP}")
                             DetailRow("Max Tokens", "${schema.inferenceParams.maxTokens}")
+                        }
+
+                        ProviderType.VLM_PROJECTOR -> {
+                            Text(
+                                text = "Vision Config",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            DetailRow("Type", "CLIP / Projector")
+                            DetailRow("Info", "Loaded via GGUF engine")
                         }
 
                         ProviderType.DIFFUSION -> {

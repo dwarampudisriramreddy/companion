@@ -251,9 +251,8 @@ class ModelDownloadService : Service() {
                             runOnCpu = false,
                             textEmbeddingSize = 0
                         )
-                    }
-
                     "TTS" -> {
+                        // Download TTS model files directly
                         AppPaths.models(applicationContext).mkdirs()
 
                         val ttsModelDir = AppPaths.ttsModel(applicationContext)
@@ -265,6 +264,9 @@ class ModelDownloadService : Service() {
 
                         // Download all TTS model files
                         downloadTTSModelFiles(ttsModelDir, modelId, modelName, notificationId)
+                    }
+                    else -> Log.w(TAG, "Unsupported model type: $modelType")
+                    }
 
                         insertModelToDatabase(
                             modelId = modelId,
@@ -648,6 +650,13 @@ class ModelDownloadService : Service() {
                     modelId = modelId,
                     modelLoadingParams = """{"type":"tts","useNNAPI":false}""",
                     modelInferenceParams = """{"voice":"F1","speed":1.05,"steps":2,"language":"en"}"""
+                )
+            }
+            ProviderType.VLM_PROJECTOR -> {
+                ModelConfig(
+                    modelId = modelId,
+                    modelLoadingParams = "{}",
+                    modelInferenceParams = null
                 )
             }
         }

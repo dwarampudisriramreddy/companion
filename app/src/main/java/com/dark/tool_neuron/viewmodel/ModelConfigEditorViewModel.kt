@@ -93,6 +93,10 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
                     ProviderType.TTS -> {
                         // TTS config managed via TTSDataStore
                     }
+
+                    ProviderType.VLM_PROJECTOR -> {
+                        // Vision projectors don't have separate config parameters managed here yet
+                    }
                 }
             } catch (_: Exception) {
                 // Handle error
@@ -138,17 +142,26 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
                             modelInferenceParams = existingConfig?.modelInferenceParams ?: """{"voice":"F1","speed":1.05,"steps":2,"language":"en"}"""
                         )
                     }
-                }
+                    ProviderType.VLM_PROJECTOR -> {
+                        // VLM Projectors may not require specific config parameters managed here
+                        // Use a default or empty config if necessary
+                        ModelConfig(
+                            id = existingConfig?.id ?: "",
+                            modelId = model.id,
+                            modelLoadingParams = "{}", // Default empty JSON
+                            modelInferenceParams = null
+                        )
+                    }
+                    }
 
-                if (existingConfig != null) {
+                    if (existingConfig != null) {
                     repository.updateConfig(config)
-                } else {
+                    } else {
                     repository.insertConfig(config)
-                }
+                    }
 
-                _saveSuccess.value = true
-                delay(2000)
-                _saveSuccess.value = false
+                    _saveSuccess.value = true
+                    delay(2000)                _saveSuccess.value = false
             } catch (_: Exception) {
                 // Handle error
             } finally {

@@ -97,6 +97,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import com.dark.tool_neuron.ui.icons.TnIcons
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import kotlinx.coroutines.withContext
+import com.dark.tool_neuron.worker.LlmModelWorker
 
 class ModelLoadingActivity : ComponentActivity() {
     private val modelParser = ModelDataParser()
@@ -301,6 +303,13 @@ fun ModelLoadingScreen(
                                 modelId = model.id,
                                 modelLoadingParams = """{"type":"tts","useNNAPI":false}""",
                                 modelInferenceParams = """{"voice":"F1","speed":1.05,"steps":2,"language":"en"}"""
+                            )
+                        }
+                        ProviderType.VLM_PROJECTOR -> {
+                            ModelConfig(
+                                modelId = model.id,
+                                modelLoadingParams = "{}",
+                                modelInferenceParams = null
                             )
                         }
                     }
