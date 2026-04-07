@@ -4,5 +4,5 @@ enum class ProviderType {
     GGUF,
     DIFFUSION,
     TTS,
-    VLM_PROJECTOR
+    VLM_PROJECTOR,
 }

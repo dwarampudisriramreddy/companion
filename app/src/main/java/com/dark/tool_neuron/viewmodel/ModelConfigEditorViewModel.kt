@@ -161,7 +161,9 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
                     }
 
                     _saveSuccess.value = true
-                    delay(2000)                _saveSuccess.value = false
+                    delay(2000)
+                    _saveSuccess.value = false
+                }
             } catch (_: Exception) {
                 // Handle error
             } finally {

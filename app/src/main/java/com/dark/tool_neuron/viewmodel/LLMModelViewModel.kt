@@ -38,6 +38,7 @@ class LLMModelViewModel @Inject constructor(
     application: Application
 ) : AndroidViewModel(application) {
 
+    private val TAG = "LLMModelViewModel"
     private val appSettings = AppSettingsDataStore(application)
 
     // Deferred until vault is ready
@@ -151,12 +152,11 @@ class LLMModelViewModel @Inject constructor(
                     ProviderType.TTS -> { /* TTS models are managed by TTSManager, not LLMService */ }
                     ProviderType.VLM_PROJECTOR -> { /* VLM projector loading is handled elsewhere */ }
                     else -> Log.w(TAG, "Unsupported provider type: ${model.providerType}")
-                    }
-                    } catch (e: Exception) {
-                    AppStateManager.setError(e.message ?: "Unknown error")
-                    }
-                    }
-
+                }
+            } catch (e: Exception) {
+                AppStateManager.setError(e.message ?: "Unknown error")
+            }
+        }
     }
 
     private suspend fun loadGgufModel(model: Model, config: ModelConfig) {

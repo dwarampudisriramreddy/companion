@@ -630,7 +630,8 @@ class ModelDownloadService : Service() {
                 val appSettings = AppSettingsDataStore(this@ModelDownloadService)
                 val tuningEnabled = appSettings.hardwareTuningEnabled.firstOrNull() ?: true
                 val loadingParams = if (tuningEnabled) {
-                    val perfMode = appSettings.performanceMode.firstOrNull() ?: com.dark.tool_neuron.global.PerformanceMode.BALANCED
+                    val perfMode = appSettings.performanceMode.firstOrNull()
+                        ?: com.dark.tool_neuron.global.PerformanceMode.BALANCED
                     val modelSizeMB = (fileSize / (1024 * 1024)).toInt()
                     val profile = HardwareScanner.scan(this@ModelDownloadService)
                     DeviceTuner.tune(profile, modelSizeMB, modelName, perfMode)
@@ -652,6 +653,7 @@ class ModelDownloadService : Service() {
                     modelInferenceParams = """{"voice":"F1","speed":1.05,"steps":2,"language":"en"}"""
                 )
             }
+
             ProviderType.VLM_PROJECTOR -> {
                 ModelConfig(
                     modelId = modelId,
