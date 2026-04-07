@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -61,15 +62,21 @@ internal fun LazyListScope.ttsSettingsSection(
                 successText = "Downloaded — loading model..."
             )
         }
-    }
-
-    item {
-        SwitchRow(
-            title = "Load TTS on App Start",
-            description = "Auto-load TTS model when app launches",
-            checked = loadTTSOnStart,
-            onCheckedChange = { viewModel.setLoadTTSOnStart(it) }
-        )
+    } else if (!ttsModelLoaded) {
+        item {
+            StandardCard(
+                title = "TTS Model Installed",
+                description = "The TTS model is downloaded but not currently loaded into memory."
+            ) {
+                Button(
+                    onClick = { viewModel.loadTts() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(Standards.RadiusMd)
+                ) {
+                    Text("Load TTS Model")
+                }
+            }
+        }
     }
 
     // Voice picker

@@ -50,17 +50,6 @@ fun HomeScreen(
         if (needsQnnSetup) onImageGenSetupNeeded()
     }
 
-    // Offer to reload the last loaded model on startup
-    val lastModelOffer by llmModelViewModel.lastModelOffer.collectAsStateWithLifecycle()
-    lastModelOffer?.let { model ->
-        ReloadModelDialog(
-            modelName = model.modelName,
-            modelType = model.providerType,
-            onConfirm = { llmModelViewModel.acceptLastModelOffer() },
-            onDismiss = { llmModelViewModel.dismissLastModelOffer() }
-        )
-    }
-
     CompositionLocalProvider(LocalCodeHighlightEnabled provides codeHighlightEnabled) {
     ModalNavigationDrawer(
         drawerState = drawerState, drawerContent = {

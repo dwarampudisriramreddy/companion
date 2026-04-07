@@ -139,7 +139,6 @@ internal fun LazyListScope.generalSettingsSection(
 internal fun LazyListScope.llmSettingsSection(
     streamingEnabled: Boolean,
     chatMemoryEnabled: Boolean,
-    askModelReloadDialog: Boolean,
     systemPrompt: String,
     viewModel: SettingsViewModel
 ) {
@@ -162,15 +161,6 @@ internal fun LazyListScope.llmSettingsSection(
             description = "Remember previous messages in conversation (faster without)",
             checked = chatMemoryEnabled,
             onCheckedChange = { viewModel.setChatMemoryEnabled(it) }
-        )
-    }
-
-    item {
-        SwitchRow(
-            title = "Ask to Reload Model",
-            description = "Show dialog on startup to reload last model. When off, auto-loads silently.",
-            checked = askModelReloadDialog,
-            onCheckedChange = { viewModel.setAskModelReloadDialog(it) }
         )
     }
 

@@ -28,6 +28,7 @@ import com.dark.tool_neuron.state.AppStateManager
 import com.dark.tool_neuron.worker.ChatManager
 import com.dark.tool_neuron.worker.DiffusionConfig
 import com.dark.tool_neuron.worker.DiffusionInferenceParams
+import com.dark.tool_neuron.models.enums.ProviderType
 import com.dark.tool_neuron.models.ModelType
 import com.dark.tool_neuron.tts.TTSManager
 import com.dark.tool_neuron.tts.TTSSettings
@@ -50,6 +51,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
 import java.util.concurrent.atomic.AtomicBoolean
 import org.json.JSONArray
 import org.json.JSONObject
@@ -159,6 +161,9 @@ class ChatViewModel @Inject constructor(
     val ttsIsPlaying = TTSManager.isPlaying
     val ttsSynthesizing = TTSManager.isSynthesizing
     val ttsModelLoaded = TTSManager.isModelLoaded
+    val hasTtsModel: StateFlow<Boolean> = AppContainer.getModelRepository().getAllModels()
+        .map { models -> models.any { it.providerType == ProviderType.TTS } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val isTextModelLoaded = LlmModelWorker.isGgufModelLoaded
     val isImageModelLoaded = LlmModelWorker.isDiffusionModelLoaded
@@ -419,9 +424,18 @@ class ChatViewModel @Inject constructor(
 
     fun pinMessageToVault(message: Messages) {
         viewModelScope.launch {
-            chatManager.pinMessageToVault(message)
+            val chatId = _currentChatId.value
+            chatManager.pinMessageToVault(chatId, message)
                 .onSuccess {
                     Toast.makeText(appContext, "Message pinned to Vault", Toast.LENGTH_SHORT).show()
+                    
+                    // Update the local message state if we are in the current chat
+                    if (chatId != null) {
+                        val index = _messages.indexOfFirst { it.msgId == message.msgId }
+                        if (index != -1) {
+                            _messages[index] = _messages[index].copy(isPinned = true)
+                        }
+                    }
                 }
                 .onFailure { e ->
                     reportError("Failed to pin message: ${e.message}")

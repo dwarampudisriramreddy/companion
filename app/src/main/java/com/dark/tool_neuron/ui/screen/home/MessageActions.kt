@@ -102,6 +102,7 @@ internal fun MessageActionsBottomSheet(
     ttsIsPlaying: Boolean,
     ttsSynthesizing: Boolean,
     ttsModelLoaded: Boolean,
+    hasTtsModel: Boolean,
     isRegenerateEnabled: Boolean,
     onSpeak: (Messages) -> Unit,
     onStopTTS: () -> Unit,
@@ -183,7 +184,7 @@ internal fun MessageActionsBottomSheet(
                                 Icon(ttsIcon, contentDescription = null)
                             }
                         },
-                        modifier = Modifier.clickable(enabled = ttsModelLoaded) {
+                        modifier = Modifier.clickable(enabled = hasTtsModel) {
                             if (ttsIsPlaying || ttsSynthesizing) onStopTTS() else onSpeak(message)
                             onDismiss()
                         }

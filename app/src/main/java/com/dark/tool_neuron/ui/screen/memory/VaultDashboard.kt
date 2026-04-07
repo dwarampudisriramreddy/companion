@@ -114,7 +114,7 @@ fun VaultDashboard(
                     horizontalArrangement = Arrangement.spacedBy(Standards.SpacingSm)
                 ) {
                     QuickStatChip(
-                        label = "App Opens",
+                        label = "Opens",
                         value = "${viewModel.appOpenCount}",
                         modifier = Modifier.weight(1f)
                     )

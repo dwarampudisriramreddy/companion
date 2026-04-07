@@ -55,15 +55,6 @@ class NVApplication : Application() {
         TTSManager.init(applicationContext, autoLoad = false)
         Log.d(TAG, "TTSManager initialized")
 
-        // Track app open count
-        appScope.launch {
-            try {
-                AppSettingsDataStore(applicationContext).incrementAppOpenCount()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to increment app open count", e)
-            }
-        }
-
         // Run data integrity check after UMS is ready (deferred to let UI render first)
         appScope.launch {
             delay(2000) // Let Activity.onCreate + first frame complete before scanning
@@ -93,24 +84,21 @@ class NVApplication : Application() {
             }
         }
 
-        // Conditionally load TTS model based on user setting
+        // Auto-load TTS model on start if it exists
         appScope.launch {
             try {
-                val settings = AppSettingsDataStore(applicationContext)
-                val loadOnStart = settings.loadTTSOnStart.first()
-                if (loadOnStart) {
-                    val modelDir = TTSManager.getModelDirectory()
-                    if (modelDir != null) {
-                        val success = TTSManager.loadModel(modelDir)
-                        Log.d(TAG, "TTS model auto-loaded on start: $success")
-                    }
-                } else {
-                    Log.d(TAG, "TTS auto-load disabled by user setting")
+                val modelDir = TTSManager.getModelDirectory()
+                if (modelDir != null) {
+                    val success = TTSManager.loadModel(modelDir)
+                    Log.d(TAG, "TTS model auto-loaded on start: $success")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error checking TTS auto-load setting", e)
+                Log.e(TAG, "Error auto-loading TTS on start", e)
             }
         }
+
+        // Schedule proactive messages
+        LlmModelWorker.scheduleProactiveMessages(applicationContext)
 
         // Note: Service binding moved to MainActivity to comply with Android 14+ foreground service restrictions
     }

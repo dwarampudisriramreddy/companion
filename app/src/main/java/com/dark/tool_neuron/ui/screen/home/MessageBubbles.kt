@@ -47,6 +47,7 @@ import java.util.*
 @Composable
 internal fun MessageBubble(
     isUser: Boolean,
+    isPinned: Boolean = false,
     timestamp: Long? = null,
     onLongClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
@@ -75,6 +76,18 @@ internal fun MessageBubble(
             shadowElevation = 1.dp
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                if (isPinned) {
+                    Icon(
+                        imageVector = TnIcons.Vault,
+                        contentDescription = "Pinned",
+                        modifier = Modifier
+                            .size(14.dp)
+                            .align(Alignment.End)
+                            .padding(bottom = 2.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                
                 content()
 
                 timestamp?.let { ts ->
@@ -97,7 +110,12 @@ internal fun UserMessageBubble(
     message: Messages,
     onLongClick: (() -> Unit)? = null
 ) {
-    MessageBubble(isUser = true, timestamp = message.timestamp, onLongClick = onLongClick) {
+    MessageBubble(
+        isUser = true,
+        isPinned = message.isPinned,
+        timestamp = message.timestamp,
+        onLongClick = onLongClick
+    ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (message.content.contentType == ContentType.TextWithImage && message.content.imageData != null) {
                 ImageMessageBubble(message, imageBlurEnabled = false)
@@ -120,7 +138,13 @@ internal fun AssistantMessageBubble(
     onLongClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
-    MessageBubble(isUser = false, timestamp = message.timestamp, onLongClick = onLongClick, content = content)
+    MessageBubble(
+        isUser = false,
+        isPinned = message.isPinned,
+        timestamp = message.timestamp,
+        onLongClick = onLongClick,
+        content = content
+    )
 }
 
 private fun formatTimestamp(timestamp: Long): String {

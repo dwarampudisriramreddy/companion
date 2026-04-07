@@ -128,6 +128,7 @@ object Tags {
         const val AGENT_PLAN = 18
         const val AGENT_SUMMARY = 19
         const val PLUGIN_RESULT_DATA = 20 // BYTES (JSON)
+        const val IS_PINNED = 21          // VARINT: 0/1
     }
 
 }

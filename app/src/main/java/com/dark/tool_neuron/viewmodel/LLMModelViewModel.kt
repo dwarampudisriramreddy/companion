@@ -56,10 +56,6 @@ class LLMModelViewModel @Inject constructor(
 
     private val _currentModelType = MutableStateFlow<ProviderType?>(null)
 
-    // Last loaded model — shown once on startup to offer reloading
-    private val _lastModelOffer = MutableStateFlow<Model?>(null)
-    val lastModelOffer: StateFlow<Model?> = _lastModelOffer.asStateFlow()
-
     // ── QNN Runtime Setup Gate ──
 
     private val _pendingDiffusionModel = MutableStateFlow<Model?>(null)
@@ -102,12 +98,8 @@ class LLMModelViewModel @Inject constructor(
                 return@launch
             }
 
-            val askDialog = appSettings.askModelReloadDialog.first()
-            if (askDialog) {
-                _lastModelOffer.value = model  // show dialog
-            } else {
-                loadModel(model)  // auto-load silently
-            }
+            // Auto-load silently
+            loadModel(model)
         }
 
         // Watch for performance mode reload requests
@@ -119,16 +111,6 @@ class LLMModelViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    fun dismissLastModelOffer() {
-        _lastModelOffer.value = null
-    }
-
-    fun acceptLastModelOffer() {
-        val model = _lastModelOffer.value ?: return
-        _lastModelOffer.value = null
-        loadModel(model)
     }
 
     // Model loading states

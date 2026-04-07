@@ -37,6 +37,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.ExistingPeriodicWorkPolicy
+import java.util.concurrent.TimeUnit
 import java.util.Base64
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
@@ -1029,4 +1032,22 @@ object LlmModelWorker {
 
         Log.i(TAG, "Embedding model download started in background")
     }
-}
+
+    /**
+     * Schedule periodic proactive messages
+     */
+    fun scheduleProactiveMessages(context: Context) {
+        val workRequest = PeriodicWorkRequestBuilder<ChatProactiveWorker>(
+            6, TimeUnit.HOURS,
+            15, TimeUnit.MINUTES
+        ).addTag("proactive_chat")
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            "proactive_chat_periodic",
+            ExistingPeriodicWorkPolicy.KEEP,
+            workRequest
+        )
+        Log.i(TAG, "Proactive chat messages scheduled")
+        }
+        }

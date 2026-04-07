@@ -104,9 +104,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val diaryEnabled: StateFlow<Boolean> = appSettingsDataStore.diaryEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
-    val askModelReloadDialog: StateFlow<Boolean> = appSettingsDataStore.askModelReloadDialog
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-
     val systemPrompt: StateFlow<String> = appSettingsDataStore.systemPrompt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
@@ -181,10 +178,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setDiaryEnabled(enabled: Boolean) {
         viewModelScope.launch { appSettingsDataStore.updateDiaryEnabled(enabled) }
-    }
-
-    fun setAskModelReloadDialog(enabled: Boolean) {
-        viewModelScope.launch { appSettingsDataStore.updateAskModelReloadDialog(enabled) }
     }
 
     fun setSystemPrompt(prompt: String) {
@@ -307,13 +300,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         androidx.core.content.ContextCompat.startForegroundService(context, intent)
     }
 
-    fun loadTtsAfterDownload() {
+    fun loadTts() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val modelDir = TTSManager.getModelDirectory() ?: return@withContext
-                TTSManager.loadModel(modelDir)
+                val settings = ttsDataStore.settings.first()
+                TTSManager.loadModel(modelDir, settings.useNNAPI)
             }
         }
+    }
+
+    fun loadTtsAfterDownload() {
+        loadTts()
     }
 
     // ==================== Backup / Restore / Delete ====================

@@ -85,6 +85,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Track app open count on fresh launch (ignore rotations/config changes)
+        if (savedInstanceState == null) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    AppSettingsDataStore(applicationContext).incrementAppOpenCount()
+                } catch (e: Exception) {
+                    android.util.Log.e("MainActivity", "Failed to increment app open count", e)
+                }
+            }
+        }
+
         // Bind LLM service after activity is created (Android 14+ requirement)
         LlmModelWorker.bindService(applicationContext)
 

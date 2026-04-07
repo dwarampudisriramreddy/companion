@@ -210,6 +210,7 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
         toolChainSteps?.let { b.putString(Tags.Message.TOOL_CHAIN_STEPS, json.encodeToString(it)) }
         agentPlan?.let { b.putString(Tags.Message.AGENT_PLAN, it) }
         agentSummary?.let { b.putString(Tags.Message.AGENT_SUMMARY, it) }
+        b.putInt(Tags.Message.IS_PINNED, if (isPinned) 1 else 0)
 
         return b.build()
     }
@@ -217,6 +218,7 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
     private fun UmsRecord.toMessages(): Messages {
         val roleVal = getInt(Tags.Message.ROLE) ?: 1
         val contentTypeVal = getInt(Tags.Message.CONTENT_TYPE) ?: 1
+        val isPinnedVal = getInt(Tags.Message.IS_PINNED) ?: 0
         
         val decodingMetricsJson = getString(Tags.Message.DECODING_METRICS)
         val imageMetricsJson = getString(Tags.Message.IMAGE_METRICS)
@@ -248,7 +250,8 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
             ragResults = ragResultsJson?.let { runCatching { json.decodeFromString<List<RagResultItem>>(it) }.getOrNull() },
             toolChainSteps = toolChainStepsJson?.let { runCatching { json.decodeFromString<List<ToolChainStepData>>(it) }.getOrNull() },
             agentPlan = getString(Tags.Message.AGENT_PLAN),
-            agentSummary = getString(Tags.Message.AGENT_SUMMARY)
+            agentSummary = getString(Tags.Message.AGENT_SUMMARY),
+            isPinned = isPinnedVal == 1
         )
     }
 }

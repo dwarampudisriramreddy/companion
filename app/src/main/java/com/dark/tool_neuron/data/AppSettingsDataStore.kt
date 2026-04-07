@@ -225,7 +225,7 @@ class AppSettingsDataStore(private val context: Context) {
     }
 
     val askModelReloadDialog: Flow<Boolean> = context.appSettingsDataStore.data.map { prefs ->
-        prefs[ASK_MODEL_RELOAD_DIALOG] ?: true
+        prefs[ASK_MODEL_RELOAD_DIALOG] ?: false
     }
 
     suspend fun updateAskModelReloadDialog(enabled: Boolean) {

@@ -51,6 +51,7 @@ fun BodyContent(
     val ttsIsPlaying by chatViewModel.ttsIsPlaying.collectAsStateWithLifecycle()
     val ttsSynthesizing by chatViewModel.ttsSynthesizing.collectAsStateWithLifecycle()
     val ttsModelLoaded by chatViewModel.ttsModelLoaded.collectAsStateWithLifecycle()
+    val hasTtsModel by chatViewModel.hasTtsModel.collectAsStateWithLifecycle()
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val dataStore = remember { com.dark.tool_neuron.data.AppSettingsDataStore(context) }
@@ -175,6 +176,7 @@ fun BodyContent(
                 ttsIsPlaying = ttsIsPlaying && ttsPlayingMsgId == selectedMessage?.msgId,
                 ttsSynthesizing = ttsSynthesizing && ttsPlayingMsgId == selectedMessage?.msgId,
                 ttsModelLoaded = ttsModelLoaded,
+                hasTtsModel = hasTtsModel,
                 isRegenerateEnabled = !chatState.isGenerating && isLastAssistant,
                 onSpeak = { chatViewModel.speakMessage(it) },
                 onStopTTS = { chatViewModel.stopTTS() },

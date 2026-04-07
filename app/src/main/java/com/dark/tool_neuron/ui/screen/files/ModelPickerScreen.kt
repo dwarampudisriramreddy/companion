@@ -51,7 +51,7 @@ fun ModelPickerScreen(
 ) {
     val context = LocalContext.current
 
-    // ── SAF Launcher ──
+    // ── SAF Launchers ──
 
     val ggufPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -61,6 +61,17 @@ fun ModelPickerScreen(
                 uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
             onModelPicked(uri, ProviderType.GGUF)
+        }
+    }
+
+    val vlmPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            onModelPicked(uri, ProviderType.VLM_PROJECTOR)
         }
     }
 
@@ -101,6 +112,16 @@ fun ModelPickerScreen(
                 buttonLabel = "Pick Model File",
                 buttonIcon = TnIcons.Upload,
                 onClick = { ggufPickerLauncher.launch(arrayOf("application/octet-stream", "*/*")) }
+            )
+
+            PickerCard(
+                icon = TnIcons.Eye,
+                title = "Vision Projector (mmproj)",
+                description = "Pick an .mmproj file to enable vision (VLM) for multimodal models like LLaVA. " +
+                    "Load a compatible GGUF text model before loading its projector.",
+                buttonLabel = "Pick Projector File",
+                buttonIcon = TnIcons.Upload,
+                onClick = { vlmPickerLauncher.launch(arrayOf("application/octet-stream", "*/*")) }
             )
         }
     }

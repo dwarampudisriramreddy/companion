@@ -46,7 +46,6 @@ fun SettingsScreen(
     val codeHighlightEnabled by viewModel.codeHighlightEnabled.collectAsStateWithLifecycle()
     val aiMemoryEnabled by viewModel.aiMemoryEnabled.collectAsStateWithLifecycle()
     val diaryEnabled by viewModel.diaryEnabled.collectAsStateWithLifecycle()
-    val askModelReloadDialog by viewModel.askModelReloadDialog.collectAsStateWithLifecycle()
     val systemPrompt by viewModel.systemPrompt.collectAsStateWithLifecycle()
     val hardwareTuningEnabled by viewModel.hardwareTuningEnabled.collectAsStateWithLifecycle()
     val hardwareProfile by viewModel.hardwareProfile.collectAsStateWithLifecycle()
@@ -117,7 +116,6 @@ fun SettingsScreen(
             llmSettingsSection(
                 streamingEnabled = streamingEnabled,
                 chatMemoryEnabled = chatMemoryEnabled,
-                askModelReloadDialog = askModelReloadDialog,
                 systemPrompt = systemPrompt,
                 viewModel = viewModel
             )
