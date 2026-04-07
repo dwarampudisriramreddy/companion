@@ -152,18 +152,17 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
                             modelInferenceParams = null
                         )
                     }
-                    }
-
-                    if (existingConfig != null) {
-                    repository.updateConfig(config)
-                    } else {
-                    repository.insertConfig(config)
-                    }
-
-                    _saveSuccess.value = true
-                    delay(2000)
-                    _saveSuccess.value = false
                 }
+
+                if (existingConfig != null) {
+                    repository.updateConfig(config)
+                } else {
+                    repository.insertConfig(config)
+                }
+
+                _saveSuccess.value = true
+                delay(2000)
+                _saveSuccess.value = false
             } catch (_: Exception) {
                 // Handle error
             } finally {

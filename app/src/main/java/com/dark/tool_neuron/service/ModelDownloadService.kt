@@ -251,6 +251,8 @@ class ModelDownloadService : Service() {
                             runOnCpu = false,
                             textEmbeddingSize = 0
                         )
+                    }
+
                     "TTS" -> {
                         // Download TTS model files directly
                         AppPaths.models(applicationContext).mkdirs()
@@ -264,9 +266,6 @@ class ModelDownloadService : Service() {
 
                         // Download all TTS model files
                         downloadTTSModelFiles(ttsModelDir, modelId, modelName, notificationId)
-                    }
-                    else -> Log.w(TAG, "Unsupported model type: $modelType")
-                    }
 
                         insertModelToDatabase(
                             modelId = modelId,
@@ -305,6 +304,8 @@ class ModelDownloadService : Service() {
 
                         // No database entry — image tool models are managed by ImageToolsViewModel
                     }
+
+                    else -> Log.w(TAG, "Unsupported model type: $modelType")
                 }
 
                 tempFile?.delete()
@@ -655,6 +656,14 @@ class ModelDownloadService : Service() {
             }
 
             ProviderType.VLM_PROJECTOR -> {
+                ModelConfig(
+                    modelId = modelId,
+                    modelLoadingParams = "{}",
+                    modelInferenceParams = null
+                )
+            }
+
+            else -> {
                 ModelConfig(
                     modelId = modelId,
                     modelLoadingParams = "{}",

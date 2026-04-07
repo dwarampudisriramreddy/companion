@@ -312,6 +312,14 @@ fun ModelLoadingScreen(
                                 modelInferenceParams = null
                             )
                         }
+
+                        else -> {
+                            ModelConfig(
+                                modelId = model.id,
+                                modelLoadingParams = "{}",
+                                modelInferenceParams = null
+                            )
+                        }
                     }
 
                     repository.insertConfig(config)
