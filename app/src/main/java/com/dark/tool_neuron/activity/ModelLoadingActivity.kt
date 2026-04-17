@@ -122,7 +122,6 @@ class ModelLoadingActivity : ComponentActivity() {
                     initialFilePath = pickerFilePath,
                     initialProviderType = when (pickerMode) {
                         ProviderType.DIFFUSION.name -> ProviderType.DIFFUSION
-                        ProviderType.VLM_PROJECTOR.name -> ProviderType.VLM_PROJECTOR
                         else -> null
                     },
                     onEngineLoaded = { loadedEngine = it },
@@ -203,20 +202,6 @@ fun ModelLoadingScreen(
         scope.launch(Dispatchers.IO) {
             isProcessing = true
             try {
-                if (selectedProviderType == ProviderType.VLM_PROJECTOR) {
-                    val success = modelParser.loadVlmProjectorFromUri(context, uri)
-                    if (success) {
-                        withContext(Dispatchers.Main) {
-                            android.widget.Toast.makeText(context, "Vision projector loaded successfully", android.widget.Toast.LENGTH_SHORT).show()
-                            onClose()
-                        }
-                    } else {
-                        loadingState = LoadingState.Error("Failed to load vision projector. Make sure a compatible GGUF model is loaded first.")
-                    }
-                    isProcessing = false
-                    return@launch
-                }
-
                 // Get file info from URI
                 val modelName = modelParser.getFileNameFromUri(context, uri)
                 val fileSize = modelParser.getFileSizeFromUri(context, uri)
@@ -305,13 +290,6 @@ fun ModelLoadingScreen(
                                 modelInferenceParams = """{"voice":"F1","speed":1.05,"steps":2,"language":"en"}"""
                             )
                         }
-                        ProviderType.VLM_PROJECTOR -> {
-                            ModelConfig(
-                                modelId = model.id,
-                                modelLoadingParams = "{}",
-                                modelInferenceParams = null
-                            )
-                        }
                     }
 
                     repository.insertConfig(config)
@@ -347,20 +325,6 @@ fun ModelLoadingScreen(
         scope.launch(Dispatchers.IO) {
             isProcessing = true
             try {
-                if (selectedProviderType == ProviderType.VLM_PROJECTOR) {
-                    val success = LlmModelWorker.loadVlmProjector(path)
-                    if (success) {
-                        withContext(Dispatchers.Main) {
-                            android.widget.Toast.makeText(context, "Vision projector loaded successfully", android.widget.Toast.LENGTH_SHORT).show()
-                            onClose()
-                        }
-                    } else {
-                        loadingState = LoadingState.Error("Failed to load vision projector. Make sure a compatible GGUF model is loaded first.")
-                    }
-                    isProcessing = false
-                    return@launch
-                }
-
                 val file = File(path)
                 val providerType = selectedProviderType ?: ProviderType.GGUF
                 val modelHash = modelParser.checksumSHA256(path)
@@ -1162,6 +1126,18 @@ private fun InfoRow(label: String, value: String) {
 }
 
 sealed class LoadingState {
+    data object Idle : LoadingState()
+    data object Loading : LoadingState()
+    data class Loaded(val info: ModelInfo) : LoadingState()
+    data class Error(val message: String) : LoadingState()
+}
+
+sealed class InstallState {
+    data object NotInstalled : InstallState()
+    data object Installing : InstallState()
+    data object Installed : InstallState()
+    data class Error(val message: String) : InstallState()
+}ate {
     data object Idle : LoadingState()
     data object Loading : LoadingState()
     data class Loaded(val info: ModelInfo) : LoadingState()

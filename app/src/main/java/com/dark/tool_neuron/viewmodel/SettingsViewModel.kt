@@ -107,6 +107,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val replyNotificationsEnabled: StateFlow<Boolean> = appSettingsDataStore.replyNotificationsEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val notificationRingtoneUri: StateFlow<String?> = appSettingsDataStore.notificationRingtoneUri
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val systemPrompt: StateFlow<String> = appSettingsDataStore.systemPrompt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
@@ -185,6 +188,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setReplyNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch { appSettingsDataStore.updateReplyNotificationsEnabled(enabled) }
+    }
+
+    fun setNotificationRingtoneUri(uri: String?) {
+        viewModelScope.launch { appSettingsDataStore.updateNotificationRingtoneUri(uri) }
     }
 
     fun setSystemPrompt(prompt: String) {

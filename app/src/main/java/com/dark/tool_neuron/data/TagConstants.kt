@@ -20,6 +20,9 @@ object Tags {
         const val CREATED_AT = 3     // FIXED64
         const val TOPIC = 4          // BYTES: "User", "Self", "Awareness"
         const val MOOD = 5           // BYTES: Optional "Curious", "Reflective", etc
+        const val PLACES = 6         // BYTES: JSON array of strings
+        const val PEOPLE = 7         // BYTES: JSON array of strings
+        const val EVENTS = 8         // BYTES: JSON array of strings
     }
 
     object Model {

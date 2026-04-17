@@ -29,6 +29,7 @@ object TnIcons {
 
     // ── Actions ──
     val Plus by lazy { tabler("M12 5l0 14", "M5 12l14 0") }
+    val Bell by lazy { tabler("M10 5a2 2 0 0 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6", "M9 17v1a3 3 0 0 0 6 0v-1") }
     val X by lazy { tabler("M18 6l-12 12", "M6 6l12 12") }
     val Check by lazy { tabler("M5 12l5 5l10 -10") }
     val Edit by lazy { tabler("M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4", "M13.5 6.5l4 4") }
@@ -144,6 +145,7 @@ object TnIcons {
     val MessageCircle by lazy { tabler("M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1") }
     val Message by lazy { tabler("M8 9h8", "M8 13h6", "M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12") }
     val Messages by lazy { tabler("M21 14l-3 -3h-7a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1h9a1 1 0 0 1 1 1v10", "M14 15v2a1 1 0 0 1 -1 1h-7l-3 3v-10a1 1 0 0 1 1 -1h2") }
+    val Music by lazy { tabler("M3 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0", "M13 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0", "M9 17v-13h10v13", "M9 8h10") }
     val Prompt by lazy { tabler("M8 9h8", "M8 13h6", "M9 18h-3a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-3l-3 3l-3 -3") }
 
     // ── Audio ──

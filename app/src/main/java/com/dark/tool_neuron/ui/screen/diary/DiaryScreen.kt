@@ -159,8 +159,56 @@ private fun DiaryEntryCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
+
+            if (entry.places.isNotEmpty() || entry.people.isNotEmpty() || entry.events.isNotEmpty()) {
+                Spacer(Modifier.height(Standards.SpacingMd))
+                
+                if (entry.places.isNotEmpty()) {
+                    MetadataSection(title = "Places", items = entry.places, icon = TnIcons.World)
+                }
+                if (entry.people.isNotEmpty()) {
+                    MetadataSection(title = "People", items = entry.people, icon = TnIcons.User)
+                }
+                if (entry.events.isNotEmpty()) {
+                    MetadataSection(title = "Events", items = entry.events, icon = TnIcons.Sparkles)
+                }
+            }
             
             if (!entry.mood.isNullOrBlank()) {
+...
+    }
+}
+
+@Composable
+private fun MetadataSection(
+    title: String,
+    items: List<String>,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Column(modifier = Modifier.padding(bottom = Standards.SpacingSm)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+            )
+            Spacer(Modifier.width(Standards.SpacingXs))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+            )
+        }
+        Text(
+            text = items.joinToString(", "),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 18.dp)
+        )
+    }
+}
                 Spacer(Modifier.height(Standards.SpacingXs))
                 Text(
                     text = "Mood: ${entry.mood}",

@@ -451,26 +451,6 @@ class GGUFEngine {
 
     // ── VLM (Vision Language Model) ──
 
-    fun loadVlmProjector(path: String, threads: Int = 0): Boolean {
-        if (!engine.isLoaded) return false
-        return try {
-            engine.loadVlmProjector(path, threads)
-        } catch (_: Exception) { false }
-    }
-
-    fun loadVlmProjectorFromFd(fd: Int, threads: Int = 0): Boolean {
-        if (!engine.isLoaded) return false
-        return try {
-            engine.loadVlmProjectorFromFd(fd, threads)
-        } catch (_: Exception) { false }
-    }
-
-    fun releaseVlmProjector() {
-        try { engine.releaseVlmProjector() } catch (_: Exception) { }
-    }
-
-    val isVlmLoaded: Boolean get() = engine.isVlmLoaded
-
     fun getVlmDefaultMarker(): String = engine.getVlmDefaultMarker()
 
     fun generateVlmFlow(

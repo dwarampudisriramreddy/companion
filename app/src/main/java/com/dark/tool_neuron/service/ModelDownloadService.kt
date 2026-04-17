@@ -655,14 +655,6 @@ class ModelDownloadService : Service() {
                     modelInferenceParams = """{"voice":"F1","speed":1.05,"steps":2,"language":"en"}"""
                 )
             }
-
-            ProviderType.VLM_PROJECTOR -> {
-                ModelConfig(
-                    modelId = modelId,
-                    modelLoadingParams = "{}",
-                    modelInferenceParams = null
-                )
-            }
         }
 
         repository.insertConfig(config)

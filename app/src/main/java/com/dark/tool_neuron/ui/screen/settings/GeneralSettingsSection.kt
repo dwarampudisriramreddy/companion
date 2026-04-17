@@ -140,6 +140,7 @@ internal fun LazyListScope.llmSettingsSection(
     streamingEnabled: Boolean,
     chatMemoryEnabled: Boolean,
     replyNotificationsEnabled: Boolean,
+    notificationRingtoneUri: String?,
     systemPrompt: String,
     viewModel: SettingsViewModel
 ) {
@@ -165,6 +166,52 @@ internal fun LazyListScope.llmSettingsSection(
         )
     }
 
+    if (replyNotificationsEnabled) {
+        item {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val ringtoneLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                if (result.resultCode == android.app.Activity.RESULT_OK) {
+                    val uri = result.data?.getParcelableExtra<android.net.Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+                    viewModel.setNotificationRingtoneUri(uri?.toString())
+                }
+            }
+
+            StandardCard(
+                title = "Notification Sound",
+                description = if (notificationRingtoneUri != null) {
+                    getRingtoneName(context, android.net.Uri.parse(notificationRingtoneUri))
+                } else {
+                    "System Default"
+                },
+                icon = TnIcons.Bell
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    ActionTextButton(
+                        onClickListener = {
+                            val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TITLE, "Select Notification Sound")
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, 
+                                    notificationRingtoneUri?.let { android.net.Uri.parse(it) })
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                            }
+                            ringtoneLauncher.launch(intent)
+                        },
+                        icon = TnIcons.Music,
+                        text = "Change Sound",
+                        shape = RoundedCornerShape(Standards.CardSmallCornerRadius)
+                    )
+                }
+            }
+        }
+    }
+
     item {
         SwitchRow(
             title = "Chat Memory",
@@ -179,6 +226,15 @@ internal fun LazyListScope.llmSettingsSection(
             systemPrompt = systemPrompt,
             onUpdate = { viewModel.setSystemPrompt(it) }
         )
+    }
+}
+
+private fun getRingtoneName(context: android.content.Context, uri: android.net.Uri): String {
+    return try {
+        val ringtone = android.media.RingtoneManager.getRingtone(context, uri)
+        ringtone.getTitle(context)
+    } catch (_: Exception) {
+        "Custom Sound"
     }
 }
 

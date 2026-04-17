@@ -47,6 +47,7 @@ fun SettingsScreen(
     val codeHighlightEnabled by viewModel.codeHighlightEnabled.collectAsStateWithLifecycle()
     val aiMemoryEnabled by viewModel.aiMemoryEnabled.collectAsStateWithLifecycle()
     val diaryEnabled by viewModel.diaryEnabled.collectAsStateWithLifecycle()
+    val notificationRingtoneUri by viewModel.notificationRingtoneUri.collectAsStateWithLifecycle()
     val systemPrompt by viewModel.systemPrompt.collectAsStateWithLifecycle()
     val hardwareTuningEnabled by viewModel.hardwareTuningEnabled.collectAsStateWithLifecycle()
     val hardwareProfile by viewModel.hardwareProfile.collectAsStateWithLifecycle()
@@ -118,6 +119,7 @@ fun SettingsScreen(
                 streamingEnabled = streamingEnabled,
                 chatMemoryEnabled = chatMemoryEnabled,
                 replyNotificationsEnabled = replyNotificationsEnabled,
+                notificationRingtoneUri = notificationRingtoneUri,
                 systemPrompt = systemPrompt,
                 viewModel = viewModel
             )

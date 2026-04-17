@@ -75,27 +75,6 @@ class ModelDataParser {
         }
     }
 
-    /**
-     * Load VLM projector from content:// URI
-     */
-    suspend fun loadVlmProjectorFromUri(
-        context: Context,
-        uri: Uri
-    ): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val pfd = context.contentResolver.openFileDescriptor(uri, "r")
-                ?: return@withContext false
-            
-            val fd = pfd.detachFd()
-            pfd.close()
-
-            return@withContext LlmModelWorker.loadVlmProjectorFromFd(fd)
-        } catch (e: Exception) {
-            android.util.Log.e("ModelDataParser", "VLM projector loading error: ${e.message}")
-            false
-        }
-    }
-
     private suspend fun loadGGUFModel(
         model: Model, config: ModelConfig?
     ): ModelLoadResult = withContext(Dispatchers.IO) {

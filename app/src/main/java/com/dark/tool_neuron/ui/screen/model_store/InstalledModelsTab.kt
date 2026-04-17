@@ -273,7 +273,6 @@ internal fun ModelDetailsDialog(
                     ProviderType.DIFFUSION -> "Stable Diffusion"
                     ProviderType.GGUF -> "GGUF (LLM)"
                     ProviderType.TTS -> "Text-to-Speech"
-                    ProviderType.VLM_PROJECTOR -> "Vision Projector"
                 }
                 DetailRow("Type", typeLabel)
                 DetailRow("Status", if (model.isActive) "Active" else "Inactive")
@@ -351,16 +350,6 @@ internal fun ModelDetailsDialog(
                             DetailRow("Max Tokens", "${schema.inferenceParams.maxTokens}")
                         }
 
-                        ProviderType.VLM_PROJECTOR -> {
-                            Text(
-                                text = "Vision Config",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            DetailRow("Type", "CLIP / Projector")
-                            DetailRow("Info", "Loaded via GGUF engine")
-                        }
-
                         ProviderType.DIFFUSION -> {
                             val loadingObj = config!!.modelLoadingParams?.let { json ->
                                 try { org.json.JSONObject(json) } catch (_: Exception) { null }
@@ -425,6 +414,20 @@ internal fun ModelDetailsDialog(
 
 @Composable
 internal fun DetailRow(label: String, value: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontFamily = if (label == "Path") maple else null
+        )
+    }
+}
+ String, value: String) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,

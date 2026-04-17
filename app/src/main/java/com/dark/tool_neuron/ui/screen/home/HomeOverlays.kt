@@ -276,7 +276,6 @@ internal fun ReloadModelDialog(
         ProviderType.GGUF -> "Text"
         ProviderType.DIFFUSION -> "Image"
         ProviderType.TTS -> "TTS"
-        ProviderType.VLM_PROJECTOR -> "Vision"
     }
 
     AlertDialog(

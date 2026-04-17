@@ -29,6 +29,7 @@ class AppSettingsDataStore(private val context: Context) {
         private val AI_MEMORY_ENABLED = booleanPreferencesKey("ai_memory_enabled")
         private val DIARY_ENABLED = booleanPreferencesKey("diary_enabled")
         private val REPLY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("reply_notifications_enabled")
+        private val NOTIFICATION_RINGTONE_URI = stringPreferencesKey("notification_ringtone_uri")
         private val SECURITY_MODE = stringPreferencesKey("security_mode")
         private val GUIDE_SEEN = booleanPreferencesKey("showcase_seen") // key kept for backward compat
         private val HARDWARE_PROFILE_JSON = stringPreferencesKey("hardware_profile_json")
@@ -188,8 +189,22 @@ class AppSettingsDataStore(private val context: Context) {
         prefs[REPLY_NOTIFICATIONS_ENABLED] ?: true
     }
 
+    val notificationRingtoneUri: Flow<String?> = context.appSettingsDataStore.data.map { prefs ->
+        prefs[NOTIFICATION_RINGTONE_URI]
+    }
+
     suspend fun updateReplyNotificationsEnabled(enabled: Boolean) {
         context.appSettingsDataStore.edit { it[REPLY_NOTIFICATIONS_ENABLED] = enabled }
+    }
+
+    suspend fun updateNotificationRingtoneUri(uri: String?) {
+        context.appSettingsDataStore.edit { prefs ->
+            if (uri != null) {
+                prefs[NOTIFICATION_RINGTONE_URI] = uri
+            } else {
+                prefs.remove(NOTIFICATION_RINGTONE_URI)
+            }
+        }
     }
 
     val securityMode: Flow<String> = context.appSettingsDataStore.data.map { prefs ->

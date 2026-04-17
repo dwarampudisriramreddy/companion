@@ -93,10 +93,6 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
                     ProviderType.TTS -> {
                         // TTS config managed via TTSDataStore
                     }
-
-                    ProviderType.VLM_PROJECTOR -> {
-                        // Vision projectors don't have separate config parameters managed here yet
-                    }
                 }
             } catch (_: Exception) {
                 // Handle error
@@ -140,16 +136,6 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
                             modelId = model.id,
                             modelLoadingParams = existingConfig?.modelLoadingParams ?: """{"type":"tts","useNNAPI":false}""",
                             modelInferenceParams = existingConfig?.modelInferenceParams ?: """{"voice":"F1","speed":1.05,"steps":2,"language":"en"}"""
-                        )
-                    }
-                    ProviderType.VLM_PROJECTOR -> {
-                        // VLM Projectors may not require specific config parameters managed here
-                        // Use a default or empty config if necessary
-                        ModelConfig(
-                            id = existingConfig?.id ?: "",
-                            modelId = model.id,
-                            modelLoadingParams = "{}", // Default empty JSON
-                            modelInferenceParams = null
                         )
                     }
                 }
@@ -318,6 +304,21 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
     fun updateDiffusionDenoiseStrength(value: Float) {
         _diffusionInferenceParams.update {
             it.copy(denoiseStrength = value)
+        }
+    }
+
+    fun updateDiffusionShowProcess(value: Boolean) {
+        _diffusionInferenceParams.update {
+            it.copy(showDiffusionProcess = value)
+        }
+    }
+
+    fun updateDiffusionShowStride(value: Int) {
+        _diffusionInferenceParams.update {
+            it.copy(showDiffusionStride = value)
+        }
+    }
+}it.copy(denoiseStrength = value)
         }
     }
 

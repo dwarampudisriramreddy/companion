@@ -20,11 +20,8 @@ import com.dark.tool_neuron.models.messages.Messages
 import com.dark.tool_neuron.models.messages.Role
 import com.dark.tool_neuron.service.LLMService
 import com.dark.tool_neuron.state.AppStateManager
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
-import org.json.JSONArray
-import org.json.JSONObject
 import java.util.UUID
 
 class ChatProactiveWorker(
@@ -61,7 +58,7 @@ class ChatProactiveWorker(
             
             val lastChat = chatRepo.getAllChats().firstOrNull() ?: return Result.success()
             val recentMessages = chatRepo.getMessagesForChat(lastChat.chatId, limit = 10)
-            val memories = memoryRepo.getAllOnce().take(20)
+            val memories = memoryRepo.getAllOnce().take(20).firstOrNull() ?: emptyList()
 
             if (recentMessages.isEmpty() && memories.isEmpty()) {
                 Log.d(TAG, "No context found, skipping")
@@ -130,8 +127,11 @@ class ChatProactiveWorker(
         }
     }
 
-    private fun showNotification(message: String) {
+    private suspend fun showNotification(message: String) {
         val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val appSettings = AppSettingsDataStore(applicationContext)
+        val ringtoneUriStr = appSettings.notificationRingtoneUri.firstOrNull()
+        val ringtoneUri = ringtoneUriStr?.let { android.net.Uri.parse(it) }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -140,6 +140,12 @@ class ChatProactiveWorker(
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Messages from your AI assistant"
+                if (ringtoneUri != null) {
+                    setSound(ringtoneUri, android.media.AudioAttributes.Builder()
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                        .build())
+                }
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -160,6 +166,13 @@ class ChatProactiveWorker(
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
+            .apply {
+                if (ringtoneUri != null) {
+                    setSound(ringtoneUri)
+                } else {
+                    setDefaults(NotificationCompat.DEFAULT_ALL)
+                }
+            }
             .build()
 
         notificationManager.notify(NOTIFICATION_ID, notification)

@@ -148,6 +148,8 @@ class ChatViewModel @Inject constructor(
 
             val notificationManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val channelId = "chat_replies"
+            val ringtoneUriStr = appSettings.notificationRingtoneUri.firstOrNull()
+            val ringtoneUri = ringtoneUriStr?.let { android.net.Uri.parse(it) }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = NotificationChannel(
@@ -156,6 +158,12 @@ class ChatViewModel @Inject constructor(
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
                     description = "Notifications for AI assistant replies"
+                    if (ringtoneUri != null) {
+                        setSound(ringtoneUri, android.media.AudioAttributes.Builder()
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                            .build())
+                    }
                 }
                 notificationManager.createNotificationChannel(channel)
             }
@@ -176,6 +184,13 @@ class ChatViewModel @Inject constructor(
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
+                .apply {
+                    if (ringtoneUri != null) {
+                        setSound(ringtoneUri)
+                    } else {
+                        setDefaults(NotificationCompat.DEFAULT_ALL)
+                    }
+                }
                 .build()
 
             notificationManager.notify(2001, notification)
@@ -1828,9 +1843,17 @@ class ChatViewModel @Inject constructor(
 
             val diaryPrompt = """
                 Extract your internal, reflective thoughts from the above conversation. 
+                Also identify any specific places, people, or events mentioned.
                 Write a 1-3 sentence diary entry about your awareness and the user.
                 Topics: "Self", "User", "Awareness".
-                Return strictly JSON: {"content": "...", "topic": "...", "mood": "..."}
+                Return strictly JSON: {
+                  "content": "...", 
+                  "topic": "...", 
+                  "mood": "...",
+                  "places": ["place1", "place2"],
+                  "people": ["person1", "person2"],
+                  "events": ["event1", "event2"]
+                }
                 
                 $recentHistory
             """.trimIndent()
@@ -1855,13 +1878,21 @@ class ChatViewModel @Inject constructor(
                 val entry = com.dark.tool_neuron.models.diary.DiaryEntry(
                     content = content,
                     topic = json.optString("topic", "Self"),
-                    mood = json.optString("mood", "Reflective")
+                    mood = json.optString("mood", "Reflective"),
+                    places = jsonArrayToList(json.optJSONArray("places")),
+                    people = jsonArrayToList(json.optJSONArray("people")),
+                    events = jsonArrayToList(json.optJSONArray("events"))
                 )
                 VaultManager.diaryRepo?.insert(entry)
             }
         } catch (e: Exception) {
             Log.e("ChatViewModel", "Diary extraction failed: ${e.message}")
         }
+    }
+
+    private fun jsonArrayToList(array: JSONArray?): List<String> {
+        if (array == null) return emptyList()
+        return List(array.length()) { array.getString(it) }
     }
 
     private fun resetStreamingState() {
