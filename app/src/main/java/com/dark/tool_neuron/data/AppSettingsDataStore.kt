@@ -28,6 +28,7 @@ class AppSettingsDataStore(private val context: Context) {
         private val ACTIVE_PERSONA_ID = stringPreferencesKey("active_persona_id")
         private val AI_MEMORY_ENABLED = booleanPreferencesKey("ai_memory_enabled")
         private val DIARY_ENABLED = booleanPreferencesKey("diary_enabled")
+        private val REPLY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("reply_notifications_enabled")
         private val SECURITY_MODE = stringPreferencesKey("security_mode")
         private val GUIDE_SEEN = booleanPreferencesKey("showcase_seen") // key kept for backward compat
         private val HARDWARE_PROFILE_JSON = stringPreferencesKey("hardware_profile_json")
@@ -181,6 +182,14 @@ class AppSettingsDataStore(private val context: Context) {
 
     suspend fun updateDiaryEnabled(enabled: Boolean) {
         context.appSettingsDataStore.edit { it[DIARY_ENABLED] = enabled }
+    }
+
+    val replyNotificationsEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { prefs ->
+        prefs[REPLY_NOTIFICATIONS_ENABLED] ?: true
+    }
+
+    suspend fun updateReplyNotificationsEnabled(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[REPLY_NOTIFICATIONS_ENABLED] = enabled }
     }
 
     val securityMode: Flow<String> = context.appSettingsDataStore.data.map { prefs ->

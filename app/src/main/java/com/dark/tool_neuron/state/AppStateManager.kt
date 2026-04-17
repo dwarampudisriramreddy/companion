@@ -20,6 +20,13 @@ object AppStateManager {
     private val _isChatRefreshed = MutableStateFlow(false)
     val isChatRefreshed: StateFlow<Boolean> = _isChatRefreshed.asStateFlow()
 
+    private val _isAppInForeground = MutableStateFlow(true)
+    val isAppInForeground: StateFlow<Boolean> = _isAppInForeground.asStateFlow()
+
+    fun setAppInForeground(foreground: Boolean) {
+        _isAppInForeground.value = foreground
+    }
+
     // ── Model Reload Signal ──
 
     private val _reloadModelRequested = MutableStateFlow(false)

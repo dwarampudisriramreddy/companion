@@ -68,10 +68,12 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         sessionStartTime = System.currentTimeMillis()
+        com.dark.tool_neuron.state.AppStateManager.setAppInForeground(true)
     }
 
     override fun onPause() {
         super.onPause()
+        com.dark.tool_neuron.state.AppStateManager.setAppInForeground(false)
         if (sessionStartTime > 0) {
             val elapsed = System.currentTimeMillis() - sessionStartTime
             sessionStartTime = 0

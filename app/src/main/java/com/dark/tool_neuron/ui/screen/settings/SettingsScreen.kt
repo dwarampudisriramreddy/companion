@@ -39,6 +39,7 @@ fun SettingsScreen(
     // App settings
     val streamingEnabled by viewModel.streamingEnabled.collectAsStateWithLifecycle()
     val chatMemoryEnabled by viewModel.chatMemoryEnabled.collectAsStateWithLifecycle()
+    val replyNotificationsEnabled by viewModel.replyNotificationsEnabled.collectAsStateWithLifecycle()
     val toolCallingEnabled by viewModel.toolCallingEnabled.collectAsStateWithLifecycle()
     val toolCallingBypassEnabled by viewModel.toolCallingBypassEnabled.collectAsStateWithLifecycle()
     val imageBlurEnabled by viewModel.imageBlurEnabled.collectAsStateWithLifecycle()
@@ -116,6 +117,7 @@ fun SettingsScreen(
             llmSettingsSection(
                 streamingEnabled = streamingEnabled,
                 chatMemoryEnabled = chatMemoryEnabled,
+                replyNotificationsEnabled = replyNotificationsEnabled,
                 systemPrompt = systemPrompt,
                 viewModel = viewModel
             )

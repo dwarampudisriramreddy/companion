@@ -10,6 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,6 +39,14 @@ fun HomeScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    DisposableEffect(Unit) {
+        chatViewModel.setChatScreenActive(true)
+        onDispose {
+            chatViewModel.setChatScreenActive(false)
+        }
+    }
+
     val appSettings = remember { AppSettingsDataStore(context) }
     val codeHighlightEnabled by appSettings.codeHighlightEnabled
         .collectAsStateWithLifecycle(initialValue = true)

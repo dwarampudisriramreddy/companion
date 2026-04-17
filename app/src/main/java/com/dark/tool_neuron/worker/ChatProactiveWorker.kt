@@ -153,7 +153,7 @@ class ChatProactiveWorker(
         )
 
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setSmallIcon(R.drawable.user) // Use existing icon
+            .setSmallIcon(R.drawable.ic_heart)
             .setContentTitle("NeuroVerse")
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))

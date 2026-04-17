@@ -139,6 +139,7 @@ internal fun LazyListScope.generalSettingsSection(
 internal fun LazyListScope.llmSettingsSection(
     streamingEnabled: Boolean,
     chatMemoryEnabled: Boolean,
+    replyNotificationsEnabled: Boolean,
     systemPrompt: String,
     viewModel: SettingsViewModel
 ) {
@@ -152,6 +153,15 @@ internal fun LazyListScope.llmSettingsSection(
             description = "Stream tokens as they generate in real-time",
             checked = streamingEnabled,
             onCheckedChange = { viewModel.setStreamingEnabled(it) }
+        )
+    }
+
+    item {
+        SwitchRow(
+            title = "Reply Notifications",
+            description = "Receive notifications for AI replies when outside of chat",
+            checked = replyNotificationsEnabled,
+            onCheckedChange = { viewModel.setReplyNotificationsEnabled(it) }
         )
     }
 

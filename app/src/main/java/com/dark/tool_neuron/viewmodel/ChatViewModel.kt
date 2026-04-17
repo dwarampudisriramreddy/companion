@@ -1,6 +1,14 @@
 package com.dark.tool_neuron.viewmodel
 
 import android.content.Context
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import com.dark.tool_neuron.R
+import com.dark.tool_neuron.activity.MainActivity
 import android.graphics.Bitmap
 import android.util.Log
 import android.widget.Toast
@@ -127,6 +135,52 @@ class ChatViewModel @Inject constructor(
 
     private val _agentSummary = MutableStateFlow<String?>(null)
     val agentSummary: StateFlow<String?> = _agentSummary.asStateFlow()
+
+    private val _isChatScreenActive = MutableStateFlow(false)
+    fun setChatScreenActive(active: Boolean) {
+        _isChatScreenActive.value = active
+    }
+
+    private fun showReplyNotification(message: String) {
+        viewModelScope.launch {
+            if (!appSettings.replyNotificationsEnabled.first()) return@launch
+            if (AppStateManager.isAppInForeground.value && _isChatScreenActive.value) return@launch
+
+            val notificationManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channelId = "chat_replies"
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    channelId,
+                    "Chat Replies",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = "Notifications for AI assistant replies"
+                }
+                notificationManager.createNotificationChannel(channel)
+            }
+
+            val intent = Intent(appContext, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                appContext, 0, intent,
+                PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val notification = NotificationCompat.Builder(appContext, channelId)
+                .setSmallIcon(R.drawable.ic_heart)
+                .setContentTitle("NeuroVerse")
+                .setContentText(message)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build()
+
+            notificationManager.notify(2001, notification)
+        }
+    }
 
     private val _currentRagContext = MutableStateFlow<String?>(null)
     val currentRagContext: StateFlow<String?> = _currentRagContext.asStateFlow()
@@ -552,6 +606,7 @@ class ChatViewModel @Inject constructor(
                     chatManager.addMessage(chatId, assistantMessage)
                     AppStateManager.setGenerationComplete()
                     AppStateManager.chatRefreshed()
+                    showReplyNotification(finalResponse)
                     
                     // Trigger diary extraction if enabled
                     viewModelScope.launch {
@@ -668,6 +723,7 @@ class ChatViewModel @Inject constructor(
                         _messages.add(assistantMessage)
                         chatManager.addMessage(chatId, assistantMessage)
                         AppStateManager.setGenerationComplete()
+                        showReplyNotification(finalResponse)
                     }
                 } else {
                     // Regular text regeneration
@@ -1041,6 +1097,7 @@ class ChatViewModel @Inject constructor(
         val spokenMsgId = assistantMessage.msgId
         resetStreamingState()
         viewModelScope.launch { autoSpeakIfEnabled(summary, spokenMsgId) }
+        showReplyNotification(summary)
         
         // Trigger diary extraction if enabled
         viewModelScope.launch {
@@ -1100,6 +1157,7 @@ class ChatViewModel @Inject constructor(
             val spokenMsgId = assistantMessage.msgId
             resetStreamingState()
             viewModelScope.launch { autoSpeakIfEnabled(finalResponse, spokenMsgId) }
+            showReplyNotification(finalResponse)
             
             // Trigger diary extraction if enabled
             viewModelScope.launch {
@@ -1721,6 +1779,7 @@ class ChatViewModel @Inject constructor(
                             AppStateManager.setGenerationComplete()
                             AppStateManager.chatRefreshed()
                             resetStreamingState()
+                            showReplyNotification("Generated image for: $prompt")
                         }
                         is LlmModelWorker.DiffusionGenerationEvent.Error -> {
                             handleImageGenerationErrorExisting(chatId, userMessage, prompt, event.message)

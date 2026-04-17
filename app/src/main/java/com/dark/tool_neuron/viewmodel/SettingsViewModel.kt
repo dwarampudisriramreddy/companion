@@ -104,6 +104,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val diaryEnabled: StateFlow<Boolean> = appSettingsDataStore.diaryEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val replyNotificationsEnabled: StateFlow<Boolean> = appSettingsDataStore.replyNotificationsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     val systemPrompt: StateFlow<String> = appSettingsDataStore.systemPrompt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
@@ -178,6 +181,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setDiaryEnabled(enabled: Boolean) {
         viewModelScope.launch { appSettingsDataStore.updateDiaryEnabled(enabled) }
+    }
+
+    fun setReplyNotificationsEnabled(enabled: Boolean) {
+        viewModelScope.launch { appSettingsDataStore.updateReplyNotificationsEnabled(enabled) }
     }
 
     fun setSystemPrompt(prompt: String) {

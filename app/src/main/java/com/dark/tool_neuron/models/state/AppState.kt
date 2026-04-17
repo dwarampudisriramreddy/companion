@@ -35,7 +35,7 @@ sealed class AppState {
 
 // Helper extension to get display text
 fun AppState.getDisplayText(): String = when (this) {
-    is AppState.Welcome -> "Hey, Welcome User"
+    is AppState.Welcome -> "Hey, Companion"
     is AppState.NoModelLoaded -> "No Model Loaded"
     is AppState.ModelLoaded -> "Ready: $modelName"
     is AppState.LoadingModel -> "Loading: $modelName"
@@ -52,7 +52,7 @@ fun AppState.getDisplayText(): String = when (this) {
 }
 
 fun AppState.getIcon(): ImageVector = when (this) {
-    is AppState.Welcome -> TnIcons.User
+    is AppState.Welcome -> TnIcons.Heart
     is AppState.NoModelLoaded -> TnIcons.Photo
     is AppState.ModelLoaded -> TnIcons.Sparkles
     is AppState.LoadingModel -> TnIcons.Settings

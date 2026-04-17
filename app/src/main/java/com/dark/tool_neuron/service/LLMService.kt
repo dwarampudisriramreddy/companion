@@ -553,7 +553,7 @@ class LLMService : Service() {
         manager.createNotificationChannel(channel)
 
         return NotificationCompat.Builder(this, channelId).setContentTitle("AI Model Service")
-            .setContentText("Running...").setSmallIcon(R.drawable.user)
+            .setContentText("Running...").setSmallIcon(R.drawable.ic_heart)
             .setPriority(NotificationCompat.PRIORITY_LOW).setOngoing(true).setSilent(true).build()
     }
 }
