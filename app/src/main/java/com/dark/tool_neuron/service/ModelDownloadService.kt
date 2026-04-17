@@ -663,14 +663,6 @@ class ModelDownloadService : Service() {
                     modelInferenceParams = null
                 )
             }
-
-            else -> {
-                ModelConfig(
-                    modelId = modelId,
-                    modelLoadingParams = "{}",
-                    modelInferenceParams = null
-                )
-            }
         }
 
         repository.insertConfig(config)

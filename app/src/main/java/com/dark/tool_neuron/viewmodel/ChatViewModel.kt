@@ -153,7 +153,7 @@ class ChatViewModel @Inject constructor(
                 val channel = NotificationChannel(
                     channelId,
                     "Chat Replies",
-                    NotificationManager.IMPORTANCE_DEFAULT
+                    NotificationManager.IMPORTANCE_HIGH
                 ).apply {
                     description = "Notifications for AI assistant replies"
                 }
@@ -161,7 +161,7 @@ class ChatViewModel @Inject constructor(
             }
 
             val intent = Intent(appContext, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             }
             val pendingIntent = PendingIntent.getActivity(
                 appContext, 0, intent,
@@ -170,10 +170,10 @@ class ChatViewModel @Inject constructor(
 
             val notification = NotificationCompat.Builder(appContext, channelId)
                 .setSmallIcon(R.drawable.ic_heart)
-                .setContentTitle("NeuroVerse")
+                .setContentTitle("Companion")
                 .setContentText(message)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build()
@@ -507,10 +507,6 @@ class ChatViewModel @Inject constructor(
             reportError("Please load a text generation model first")
             return
         }
-        if (!LlmModelWorker.isVlmLoaded.value) {
-            reportError("Please load a vision projector (mmproj) first")
-            return
-        }
         if (_isGenerating.value) return
 
         val base64Image = LlmModelWorker.bytesToBase64(imageData.firstOrNull() ?: ByteArray(0))
@@ -677,7 +673,7 @@ class ChatViewModel @Inject constructor(
 
                 val maxTokens = getCurrentModelMaxTokens()
 
-                if (imageData != null && LlmModelWorker.isVlmLoaded.value) {
+                if (imageData != null) {
                     // Handle VLM regeneration
                     val bytes = LlmModelWorker.base64ToBytes(imageData)
                     val marker = LlmModelWorker.getVlmDefaultMarker()

@@ -151,7 +151,6 @@ class LLMModelViewModel @Inject constructor(
                     ProviderType.DIFFUSION -> loadDiffusionModel(model, config)
                     ProviderType.TTS -> { /* TTS models are managed by TTSManager, not LLMService */ }
                     ProviderType.VLM_PROJECTOR -> { /* VLM projector loading is handled elsewhere */ }
-                    else -> Log.w(TAG, "Unsupported provider type: ${model.providerType}")
                 }
             } catch (e: Exception) {
                 AppStateManager.setError(e.message ?: "Unknown error")

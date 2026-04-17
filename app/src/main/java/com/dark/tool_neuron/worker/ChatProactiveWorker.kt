@@ -137,7 +137,7 @@ class ChatProactiveWorker(
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Proactive Assistant",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Messages from your AI assistant"
             }
@@ -145,7 +145,7 @@ class ChatProactiveWorker(
         }
 
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
             applicationContext, 0, intent,
@@ -154,10 +154,10 @@ class ChatProactiveWorker(
 
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_heart)
-            .setContentTitle("NeuroVerse")
+            .setContentTitle("Companion")
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
