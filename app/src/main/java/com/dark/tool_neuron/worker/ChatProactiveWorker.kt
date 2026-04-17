@@ -90,7 +90,7 @@ class ChatProactiveWorker(
 
             // 5. Generate message
             var generatedMessage = ""
-            val flow = service.ggufEngine.generateFlow(finalPrompt, maxTokens = 60)
+            val flow: Flow<com.dark.tool_neuron.engine.GenerationEvent> = service.ggufEngine.generateFlow(finalPrompt, maxTokens = 60)
             
             flow.collect { event ->
                 if (event is com.dark.tool_neuron.engine.GenerationEvent.Token) {

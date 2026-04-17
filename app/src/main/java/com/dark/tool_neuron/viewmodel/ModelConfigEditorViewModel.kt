@@ -143,6 +143,7 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
                 if (existingConfig != null) {
                     repository.updateConfig(config)
                 } else {
+                } else {
                     repository.insertConfig(config)
                 }
 

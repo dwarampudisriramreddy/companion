@@ -174,4 +174,8 @@ private fun DiaryEntryCard(
                 }
             }
             
-            if (!entry.mood.isNullOrBlank()) {
+            } // Closing brace for if (!entry.mood.isNullOrBlank()) {
+        } // Closing brace for Column
+    } // Closing brace for Card
+} // Closing brace for LazyColumn
+
