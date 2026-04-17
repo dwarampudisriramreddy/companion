@@ -174,8 +174,30 @@ private fun DiaryEntryCard(
                 }
             }
             
-            } // Closing brace for if (!entry.mood.isNullOrBlank()) {
-        } // Closing brace for Column
-    } // Closing brace for Card
-} // Closing brace for LazyColumn
+            }
+        }
+    }
+}
 
+// Moved MetadataSection definition outside of DiaryEntryCard to be a top-level private composable.
+@Composable
+private fun MetadataSection(
+    title: String,
+    items: List<String>,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(Standards.SpacingXs)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Standards.SpacingSm)) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        }
+        items.forEach { item ->
+            Text(
+                text = item,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = Standards.SpacingLg)
+            )
+        }
+    }
+}

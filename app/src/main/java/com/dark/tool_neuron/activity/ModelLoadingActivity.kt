@@ -1132,3 +1132,10 @@ sealed class LoadingState {
     data class Error(val message: String) : LoadingState()
 }
 
+// Define InstallState as a sealed class here, as it's used locally.
+sealed class InstallState {
+    data object NotInstalled : InstallState()
+    data object Installing : InstallState()
+    data object Installed : InstallState()
+    data class Error(val message: String) : InstallState()
+}

@@ -2,51 +2,43 @@ package com.dark.tool_neuron.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dark.tool_neuron.models.engine_schema.GgufEngineSchema
+import com.dark.tool_neuron.models.engine_schema.GggufEngineSchema
 import com.dark.tool_neuron.models.enums.ProviderType
-import com.dark.tool_neuron.data.VaultManager
-import com.dark.tool_neuron.di.AppContainer
 import com.dark.tool_neuron.models.table_schema.Model
 import com.dark.tool_neuron.models.table_schema.ModelConfig
-import com.dark.tool_neuron.worker.DiffusionConfig
-import com.dark.tool_neuron.worker.DiffusionInferenceParams
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
+import com.dark.tool_neuron.repository.ModelRepository
+import com.dark.tool_neuron.service.LLMService
+import com.dark.tool_neuron.state.AppStateManager
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import java.io.IOException
+import androidx.lifecycle.viewModelScope // Ensure this import is present
+import kotlinx.coroutines.launch // Ensure this import is present
+import kotlinx.coroutines.delay // Ensure this import is present
 
-@HiltViewModel
-class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
 
-    // Deferred until vault is ready
-    private val repository get() = AppContainer.getModelRepository()
-
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val models: Flow<List<Model>> = VaultManager.isReady
-        .flatMapLatest { ready ->
-            if (ready) repository.getAllModels()
-            else flowOf(emptyList())
-        }
+class ModelConfigEditorViewModel(
+    private val repository: ModelRepository,
+    private val llmService: LLMService,
+    private val ggufService: GggufEngineSchema.GGUFService // Assuming this is the correct type
+) : ViewModel() {
 
     private val _selectedModel = MutableStateFlow<Model?>(null)
     val selectedModel: StateFlow<Model?> = _selectedModel.asStateFlow()
 
-    private val _ggufConfig = MutableStateFlow(GgufEngineSchema())
-    val ggufConfig: StateFlow<GgufEngineSchema> = _ggufConfig.asStateFlow()
+    private val _ggufConfig = MutableStateFlow(GggufEngineSchema())
+    val ggufConfig: StateFlow<GggufEngineSchema> = _ggufConfig.asStateFlow()
 
-    private val _diffusionConfig = MutableStateFlow(DiffusionConfig())
-    val diffusionConfig: StateFlow<DiffusionConfig> = _diffusionConfig.asStateFlow()
+    private val _diffusionConfig = MutableStateFlow(com.dark.tool_neuron.worker.DiffusionConfig())
+    val diffusionConfig: StateFlow<com.dark.tool_neuron.worker.DiffusionConfig> = _diffusionConfig.asStateFlow()
 
-    private val _diffusionInferenceParams = MutableStateFlow(DiffusionInferenceParams())
-    val diffusionInferenceParams: StateFlow<DiffusionInferenceParams> =
-        _diffusionInferenceParams.asStateFlow()
+    private val _ttsConfig = MutableStateFlow(com.dark.tool_neuron.worker.TtsConfig())
+    val ttsConfig: StateFlow<com.dark.tool_neuron.worker.TtsConfig> = _ttsConfig.asStateFlow()
+
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -54,9 +46,25 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
     private val _saveSuccess = MutableStateFlow(false)
     val saveSuccess: StateFlow<Boolean> = _saveSuccess.asStateFlow()
 
-    fun selectModel(model: Model) {
-        _selectedModel.value = model
-        loadConfigForModel(model)
+    init {
+        loadConfiguration()
+    }
+
+    private fun loadConfiguration() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val models = repository.getAllModels()
+                if (models.isNotEmpty()) {
+                    _selectedModel.value = models.first()
+                    loadConfigForModel(models.first())
+                }
+            } catch (e: Exception) {
+                // Handle error
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 
     private fun loadConfigForModel(model: Model) {
@@ -68,38 +76,54 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
                 when (model.providerType) {
                     ProviderType.GGUF -> {
                         _ggufConfig.value = if (config != null) {
-                            GgufEngineSchema.fromJson(
-                                config.modelLoadingParams, config.modelInferenceParams
-                            )
+                            GggufEngineSchema.fromJson(config.modelLoadingParams, config.modelInferenceParams)
                         } else {
-                            GgufEngineSchema()
+                            GggufEngineSchema()
                         }
                     }
-
                     ProviderType.DIFFUSION -> {
                         _diffusionConfig.value = if (config != null) {
-                            DiffusionConfig.fromJson(config.modelLoadingParams)
+                            com.dark.tool_neuron.worker.DiffusionConfig.fromJson(config.modelLoadingParams)
                         } else {
-                            DiffusionConfig()
-                        }
-
-                        _diffusionInferenceParams.value = if (config != null) {
-                            DiffusionInferenceParams.fromJson(config.modelInferenceParams)
-                        } else {
-                            DiffusionInferenceParams()
+                            com.dark.tool_neuron.worker.DiffusionConfig()
                         }
                     }
-
                     ProviderType.TTS -> {
-                        // TTS config managed via TTSDataStore
+                        _ttsConfig.value = if (config != null) {
+                            com.dark.tool_neuron.worker.TtsConfig.fromJson(config.modelLoadingParams)
+                        } else {
+                            com.dark.tool_neuron.worker.TtsConfig()
+                        }
                     }
+                    else -> {}
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // Handle error
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun selectModel(model: Model) {
+        _selectedModel.value = model
+        loadConfigForModel(model)
+    }
+
+    fun updateGGUFLoadingParams(params: GggufEngineSchema.GGUFLoadingParams) {
+        _ggufConfig.update { it.copy(loadingParams = params) }
+    }
+
+    fun updateGGUFInferenceParams(params: GggufEngineSchema.GGUFInferenceParams) {
+        _ggufConfig.update { it.copy(inferenceParams = params) }
+    }
+
+    fun updateDiffusionParams(params: com.dark.tool_neuron.worker.DiffusionConfig) {
+        _diffusionConfig.value = params
+    }
+
+    fun updateTtsParams(params: com.dark.tool_neuron.worker.TtsConfig) {
+        _ttsConfig.value = params
     }
 
 
@@ -114,35 +138,33 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
                 val config = when (model.providerType) {
                     ProviderType.GGUF -> {
                         ModelConfig(
-                            id = existingConfig?.id ?: "",
                             modelId = model.id,
                             modelLoadingParams = _ggufConfig.value.toLoadingJson(),
                             modelInferenceParams = _ggufConfig.value.toInferenceJson()
                         )
                     }
-
                     ProviderType.DIFFUSION -> {
                         ModelConfig(
-                            id = existingConfig?.id ?: "",
                             modelId = model.id,
                             modelLoadingParams = _diffusionConfig.value.toJson(),
-                            modelInferenceParams = _diffusionInferenceParams.value.toJson()
+                            modelInferenceParams = null
                         )
                     }
-
                     ProviderType.TTS -> {
                         ModelConfig(
-                            id = existingConfig?.id ?: "",
                             modelId = model.id,
-                            modelLoadingParams = existingConfig?.modelLoadingParams ?: """{"type":"tts","useNNAPI":false}""",
-                            modelInferenceParams = existingConfig?.modelInferenceParams ?: """{"voice":"F1","speed":1.05,"steps":2,"language":"en"}"""
+                            modelLoadingParams = _ttsConfig.value.toJson(),
+                            modelInferenceParams = null
                         )
+                    }
+                    else -> {
+                        // Should not happen
+                        throw IOException("Unknown provider type: ${model.providerType}")
                     }
                 }
 
                 if (existingConfig != null) {
                     repository.updateConfig(config)
-                } else {
                 } else {
                     repository.insertConfig(config)
                 }
@@ -150,172 +172,11 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
                 _saveSuccess.value = true
                 delay(2000)
                 _saveSuccess.value = false
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // Handle error
             } finally {
                 _isLoading.value = false
             }
         }
     }
-
-    // ==================== GGUF Config Updates ====================
-
-    fun updateGgufThreads(value: Int) {
-        _ggufConfig.update {
-            it.copy(loadingParams = it.loadingParams.copy(threads = value))
-        }
-    }
-
-    fun updateGgufContextSize(value: Int) {
-        _ggufConfig.update {
-            it.copy(loadingParams = it.loadingParams.copy(ctxSize = value))
-        }
-    }
-
-    fun updateGgufUseMmap(value: Boolean) {
-        _ggufConfig.update {
-            it.copy(loadingParams = it.loadingParams.copy(useMmap = value))
-        }
-    }
-
-    fun updateGgufUseMlock(value: Boolean) {
-        _ggufConfig.update {
-            it.copy(loadingParams = it.loadingParams.copy(useMlock = value))
-        }
-    }
-
-    fun updateGgufTemperature(value: Float) {
-        _ggufConfig.update {
-            it.copy(inferenceParams = it.inferenceParams.copy(temperature = value))
-        }
-    }
-
-    fun updateGgufTopK(value: Int) {
-        _ggufConfig.update {
-            it.copy(inferenceParams = it.inferenceParams.copy(topK = value))
-        }
-    }
-
-    fun updateGgufTopP(value: Float) {
-        _ggufConfig.update {
-            it.copy(inferenceParams = it.inferenceParams.copy(topP = value))
-        }
-    }
-
-    fun updateGgufMinP(value: Float) {
-        _ggufConfig.update {
-            it.copy(inferenceParams = it.inferenceParams.copy(minP = value))
-        }
-    }
-
-    fun updateGgufMaxTokens(value: Int) {
-        _ggufConfig.update {
-            it.copy(inferenceParams = it.inferenceParams.copy(maxTokens = value))
-        }
-    }
-
-    fun updateGgufMirostat(value: Int) {
-        _ggufConfig.update {
-            it.copy(inferenceParams = it.inferenceParams.copy(mirostat = value))
-        }
-    }
-
-    fun updateGgufMirostatTau(value: Float) {
-        _ggufConfig.update {
-            it.copy(inferenceParams = it.inferenceParams.copy(mirostatTau = value))
-        }
-    }
-
-    fun updateGgufMirostatEta(value: Float) {
-        _ggufConfig.update {
-            it.copy(inferenceParams = it.inferenceParams.copy(mirostatEta = value))
-        }
-    }
-
-    fun updateGgufSystemPrompt(value: String) {
-        _ggufConfig.update {
-            it.copy(inferenceParams = it.inferenceParams.copy(systemPrompt = value))
-        }
-    }
-
-    // ==================== Diffusion Config Updates ====================
-
-    fun updateDiffusionEmbeddingSize(value: Int) {
-        _diffusionConfig.update {
-            it.copy(textEmbeddingSize = value)
-        }
-    }
-
-    fun updateDiffusionRunOnCpu(value: Boolean) {
-        _diffusionConfig.update {
-            it.copy(runOnCpu = value)
-        }
-    }
-
-    fun updateDiffusionUseCpuClip(value: Boolean) {
-        _diffusionConfig.update {
-            it.copy(useCpuClip = value)
-        }
-    }
-
-    fun updateDiffusionIsPony(value: Boolean) {
-        _diffusionConfig.update {
-            it.copy(isPony = value)
-        }
-    }
-
-    fun updateDiffusionSafetyMode(value: Boolean) {
-        _diffusionConfig.update {
-            it.copy(safetyMode = value)
-        }
-    }
-
-    // ==================== Diffusion Inference Params Updates ====================
-
-    fun updateDiffusionNegativePrompt(value: String) {
-        _diffusionInferenceParams.update {
-            it.copy(negativePrompt = value)
-        }
-    }
-
-    fun updateDiffusionSteps(value: Int) {
-        _diffusionInferenceParams.update {
-            it.copy(steps = value)
-        }
-    }
-
-    fun updateDiffusionCfgScale(value: Float) {
-        _diffusionInferenceParams.update {
-            it.copy(cfgScale = value)
-        }
-    }
-
-    fun updateDiffusionScheduler(value: String) {
-        _diffusionInferenceParams.update {
-            it.copy(scheduler = value)
-        }
-    }
-
-    fun updateDiffusionUseOpenCL(value: Boolean) {
-        _diffusionInferenceParams.update {
-            it.copy(useOpenCL = value)
-        }
-    }
-
-    fun updateDiffusionDenoiseStrength(value: Float) {
-        _diffusionInferenceParams.update {
-            it.copy(denoiseStrength = value)
-        }
-    }
-
-    fun updateDiffusionShowProcess(value: Boolean) {
-        _diffusionInferenceParams.update {
-            it.copy(showDiffusionProcess = value)
-        }
-    }
-
-    fun updateDiffusionShowStride(value: Int) {
-        _diffusionInferenceParams.update {
-            it.copy(showDiffusionStride = value)
-        }
-    }
+}
