@@ -21,6 +21,7 @@ import com.dark.tool_neuron.models.messages.Role
 import com.dark.tool_neuron.service.LLMService
 import com.dark.tool_neuron.state.AppStateManager
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.take
 import java.util.UUID
 

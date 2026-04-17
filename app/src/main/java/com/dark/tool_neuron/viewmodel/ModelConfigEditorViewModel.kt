@@ -318,19 +318,3 @@ class ModelConfigEditorViewModel @Inject constructor() : ViewModel() {
             it.copy(showDiffusionStride = value)
         }
     }
-}it.copy(denoiseStrength = value)
-        }
-    }
-
-    fun updateDiffusionShowProcess(value: Boolean) {
-        _diffusionInferenceParams.update {
-            it.copy(showDiffusionProcess = value)
-        }
-    }
-
-    fun updateDiffusionShowStride(value: Int) {
-        _diffusionInferenceParams.update {
-            it.copy(showDiffusionStride = value)
-        }
-    }
-}

@@ -1132,21 +1132,3 @@ sealed class LoadingState {
     data class Error(val message: String) : LoadingState()
 }
 
-sealed class InstallState {
-    data object NotInstalled : InstallState()
-    data object Installing : InstallState()
-    data object Installed : InstallState()
-    data class Error(val message: String) : InstallState()
-}ate {
-    data object Idle : LoadingState()
-    data object Loading : LoadingState()
-    data class Loaded(val info: ModelInfo) : LoadingState()
-    data class Error(val message: String) : LoadingState()
-}
-
-sealed class InstallState {
-    data object NotInstalled : InstallState()
-    data object Installing : InstallState()
-    data object Installed : InstallState()
-    data class Error(val message: String) : InstallState()
-}

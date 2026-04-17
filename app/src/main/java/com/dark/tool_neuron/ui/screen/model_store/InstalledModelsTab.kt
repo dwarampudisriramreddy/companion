@@ -427,17 +427,3 @@ internal fun DetailRow(label: String, value: String) {
         )
     }
 }
- String, value: String) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontFamily = if (label == "Path") maple else null
-        )
-    }
-}
