@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import com.dark.tool_neuron.engine.GGUFEngine
+import com.dark.tool_neuron.engine.DiffusionEngine
 import com.dark.tool_neuron.global.formatNumber
 import com.dark.tool_neuron.models.enums.ProviderType
 import com.dark.tool_neuron.models.table_schema.Model
@@ -49,7 +50,7 @@ class ModelDataParser {
 
             val fd = pfd.detachFd()  // Detach so engine owns the fd
 
-            val success = engine.loadFromFd(fd, config ?: ModelConfig(modelId = modelName))
+            val success = engine.loadFromFd(fd, config ?: ModelConfig(modelId = modelName, modelLoadingParams = null, modelInferenceParams = null))
 
             if (success) {
                 ModelLoadResult.Success(
@@ -71,7 +72,7 @@ class ModelDataParser {
 
     private suspend fun loadGGUFModel(model: Model, config: ModelConfig?): ModelLoadResult {
         val engine = GGUFEngine()
-        val success = engine.load(model, config ?: ModelConfig(modelId = model.id))
+        val success = engine.load(model, config ?: ModelConfig(modelId = model.id, modelLoadingParams = null, modelInferenceParams = null))
         
         return if (success) {
             ModelLoadResult.Success(
@@ -93,6 +94,13 @@ class ModelDataParser {
         return ModelLoadResult.Error("Diffusion loading not implemented in parser yet")
     }
 
+    fun unloadModel(engine: Any) {
+        when (engine) {
+            is GGUFEngine -> engine.unload()
+            // is DiffusionEngine -> engine.cleanup()
+        }
+    }
+
     /**
      * Get display name from content:// URI
      */
@@ -105,6 +113,45 @@ class ModelDataParser {
             }
         }
         return name
+    }
+
+    fun getFileSizeFromUri(context: Context, uri: Uri): Long {
+        return context.contentResolver.openFileDescriptor(uri, "r")?.use { 
+            it.statSize
+        } ?: 0L
+    }
+
+    fun checksumSHA256FromUri(context: Context, uri: Uri): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            val buffer = ByteArray(8192)
+            var bytesRead = input.read(buffer)
+            var totalRead = 0L
+            // For large models, just hash the first 10MB for speed in loader activity
+            while (bytesRead != -1 && totalRead < 10 * 1024 * 1024) {
+                digest.update(buffer, 0, bytesRead)
+                totalRead += bytesRead
+                bytesRead = input.read(buffer)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    fun checksumSHA256(path: String): String {
+        val file = File(path)
+        if (!file.exists()) return ""
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(8192)
+            var bytesRead = input.read(buffer)
+            var totalRead = 0L
+            while (bytesRead != -1 && totalRead < 10 * 1024 * 1024) {
+                digest.update(buffer, 0, bytesRead)
+                totalRead += bytesRead
+                bytesRead = input.read(buffer)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     /** Safely close a raw fd obtained via detachFd() */

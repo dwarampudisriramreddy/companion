@@ -18,8 +18,10 @@ import com.dark.tool_neuron.di.AppContainer
 import com.dark.tool_neuron.engine.GenerationEvent
 import com.dark.tool_neuron.models.messages.MessageContent
 import com.dark.tool_neuron.models.messages.Role
+import com.dark.tool_neuron.models.messages.ContentType
 import com.dark.tool_neuron.service.LLMService
 import kotlinx.coroutines.flow.Flow
+import kotlin.collections.firstOrNull
 
 class ChatProactiveWorker(
     context: Context,
@@ -46,9 +48,9 @@ class ChatProactiveWorker(
             val memories = memoryRepo.getAllOnce()
             
             // Get last chat to get recent messages
-            val chats = chatRepo.getAllChats().getOrNull()
-            val recentMessages = if (!chats.isNullOrEmpty()) {
-                chatRepo.getMessages(chats.first().id, limit = 10).getOrNull() ?: emptyList()
+            val chats = chatRepo.getAllChats()
+            val recentMessages = if (chats.isNotEmpty()) {
+                chatRepo.getMessagesForChat(chats.first().chatId, limit = 10)
             } else {
                 emptyList()
             }
@@ -61,14 +63,16 @@ class ChatProactiveWorker(
             if (recentMessages.isNotEmpty()) {
                 contextBuilder.append("\nHere is our recent conversation:\n")
                 recentMessages.forEach { msg ->
-                    val role = when (msg.role) {
-                        Role.USER -> "User"
-                        Role.ASSISTANT -> "Assistant"
-                        Role.SYSTEM -> "System"
+                    val roleStr = when (msg.role) {
+                        Role.User -> "User"
+                        Role.Assistant -> "Assistant"
                     }
-                    val text = msg.content.filterIsInstance<MessageContent.Text>().firstOrNull()?.value ?: ""
+                    val text = if (msg.content.contentType == ContentType.Text || msg.content.contentType == ContentType.TextWithImage) {
+                        msg.content.content
+                    } else ""
+                    
                     if (text.isNotBlank()) {
-                        contextBuilder.append("$role: $text\n")
+                        contextBuilder.append("$roleStr: $text\n")
                     }
                 }
             }
