@@ -94,7 +94,7 @@ class ModelDataParser {
         return ModelLoadResult.Error("Diffusion loading not implemented in parser yet")
     }
 
-    fun unloadModel(engine: Any) {
+    suspend fun unloadModel(engine: Any) {
         when (engine) {
             is GGUFEngine -> engine.unload()
             // is DiffusionEngine -> engine.cleanup()
