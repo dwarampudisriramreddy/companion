@@ -4,6 +4,7 @@
     import com.dark.tool_neuron.database.AppDatabase
     import com.dark.tool_neuron.engine.EmbeddingEngine
     import com.dark.tool_neuron.repo.ChatRepository
+    import com.dark.tool_neuron.repo.ModelRepository
     import com.dark.tool_neuron.repo.RagRepository
     import com.dark.tool_neuron.worker.ChatManager
     import com.dark.tool_neuron.worker.RagVaultIntegration
@@ -41,6 +42,12 @@
         @Singleton
         fun provideChatRepository(): ChatRepository {
             return ChatRepository()
+        }
+
+        @Provides
+        @Singleton
+        fun provideModelRepository(): ModelRepository {
+            return AppContainer.getModelRepository()
         }
 
         @Provides

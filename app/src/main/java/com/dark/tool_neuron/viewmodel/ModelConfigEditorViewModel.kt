@@ -91,7 +91,6 @@ class ModelConfigEditorViewModel @Inject constructor(
                             TtsConfig()
                         }
                     }
-                    else -> {}
                 }
             } catch (e: Exception) {
                 // Handle error
@@ -241,9 +240,6 @@ class ModelConfigEditorViewModel @Inject constructor(
                             modelLoadingParams = _ttsConfig.value.toJson(),
                             modelInferenceParams = null
                         )
-                    }
-                    else -> {
-                        throw IOException("Unknown provider type: ${model.providerType}")
                     }
                 }
 
