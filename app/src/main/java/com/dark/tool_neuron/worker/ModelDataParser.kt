@@ -48,324 +48,49 @@ class ModelDataParser {
                 ?: return@withContext ModelLoadResult.Error("Cannot open file descriptor for URI")
 
             val fd = pfd.detachFd()  // Detach so engine owns the fd
-            pfd.close()              // Close the PFD wrapper (no-op after detach, but tidy)
 
-            val success = try {
-                engine.loadFromFd(fd, config)
-            } catch (e: Exception) {
-                closeFdSafely(fd)
-                throw e
-            }
+            val success = engine.loadFromFd(fd, config ?: ModelConfig(modelId = modelName))
 
             if (success) {
-                // Engine now owns fd — do not close it
-                val infoJson = engine.getModelInfo()
-                if (infoJson != null) {
-                    val modelInfo = parseGGUFInfo(infoJson)
-                    ModelLoadResult.Success(info = modelInfo, engine = engine)
-                } else {
-                    ModelLoadResult.Error("Failed to retrieve model information")
-                }
-            } else {
-                closeFdSafely(fd)
-                ModelLoadResult.Error("Failed to load GGUF model from URI")
-            }
-        } catch (e: Exception) {
-            ModelLoadResult.Error("GGUF loading error: ${e.message}")
-        }
-    }
-
-    private suspend fun loadGGUFModel(
-        model: Model, config: ModelConfig?
-    ): ModelLoadResult = withContext(Dispatchers.IO) {
-        try {
-            val engine = GGUFEngine()
-            val success = engine.load(model, config)
-
-            if (success) {
-                val infoJson = engine.getModelInfo()
-                if (infoJson != null) {
-                    val modelInfo = parseGGUFInfo(infoJson)
-                    ModelLoadResult.Success(
-                        info = modelInfo, engine = engine
-                    )
-                } else {
-                    ModelLoadResult.Error("Failed to retrieve model information")
-                }
-            } else {
-                ModelLoadResult.Error("Failed to load GGUF model")
-            }
-        } catch (e: Exception) {
-            ModelLoadResult.Error("GGUF loading error: ${e.message}")
-        }
-    }
-
-    private suspend fun loadDiffusionModel(
-        model: Model, config: ModelConfig?
-    ): ModelLoadResult = withContext(Dispatchers.IO) {
-        try {
-            // Parse diffusion config from ModelConfig
-            val diffusionConfig = DiffusionConfig.fromJson(config?.modelLoadingParams)
-            val inferenceParams = parseDiffusionInferenceParams(config?.modelInferenceParams)
-
-            // Validate model directory exists
-            val modelDir = File(model.modelPath)
-            if (!modelDir.exists() || !modelDir.isDirectory) {
-                return@withContext ModelLoadResult.Error("Model directory not found: ${model.modelPath}")
-            }
-
-            // Check for required files — clip uses .mnn if runOnCpu OR useCpuClip (matches DiffusionManager)
-            val clipFilename = if (diffusionConfig.runOnCpu || diffusionConfig.useCpuClip) "clip.mnn" else "clip.bin"
-            val requiredFiles = if (diffusionConfig.runOnCpu) {
-                listOf("clip.mnn", "unet.mnn", "vae_decoder.mnn", "tokenizer.json")
-            } else {
-                listOf(clipFilename, "unet.bin", "vae_decoder.bin", "tokenizer.json")
-            }
-
-            val missingFiles = requiredFiles.filter { !File(modelDir, it).exists() }
-            if (missingFiles.isNotEmpty()) {
-                return@withContext ModelLoadResult.Error("Missing model files: ${missingFiles.joinToString()}. Expected in: ${model.modelPath}")
-            }
-
-            // Load using worker (which uses service)
-            val success = LlmModelWorker.loadDiffusionModel(
-                name = model.modelName,
-                modelDir = model.modelPath,
-                height = diffusionConfig.height,
-                width = diffusionConfig.width,
-                textEmbeddingSize = diffusionConfig.textEmbeddingSize,
-                runOnCpu = diffusionConfig.runOnCpu,
-                useCpuClip = diffusionConfig.useCpuClip,
-                isPony = diffusionConfig.isPony,
-                httpPort = diffusionConfig.httpPort,
-                safetyMode = diffusionConfig.safetyMode
-            )
-
-            if (success) {
-                val modelInfo = DiffusionModelInfo(
-                    providerType = ProviderType.DIFFUSION,
-                    architecture = "Stable Diffusion",
-                    name = model.modelName,
-                    description = "Stable Diffusion model for image generation",
-                    parameters = buildDiffusionParametersMap(diffusionConfig, modelDir),
-                    modelConfig = diffusionConfig,
-                    inferenceParams = inferenceParams
-                )
-
                 ModelLoadResult.Success(
-                    info = modelInfo,
-                    engine = "DiffusionEngine" // Placeholder since engine is in service
+                    info = GGUFModelInfo(
+                        providerType = ProviderType.GGUF,
+                        architecture = engine.getModelInfo() ?: "Unknown",
+                        name = modelName,
+                        description = "GGUF Model loaded from URI"
+                    ),
+                    engine = engine
                 )
             } else {
-                ModelLoadResult.Error("Failed to load Diffusion model")
+                ModelLoadResult.Error("Failed to load model from FD")
             }
         } catch (e: Exception) {
-            ModelLoadResult.Error("Diffusion loading error: ${e.message}")
+            ModelLoadResult.Error("Error loading model from URI: ${e.message}")
         }
     }
 
-
-    private fun parseDiffusionInferenceParams(jsonString: String?): DiffusionInferenceParams {
-        return DiffusionInferenceParams.fromJson(jsonString)
-    }
-
-    private fun buildDiffusionParametersMap(
-        config: DiffusionConfig, modelDir: File
-    ): Map<String, String> {
-        return buildMap {
-            put("Type", if (config.runOnCpu) "CPU" else "NPU/GPU")
-            put("Text Embedding Size", config.textEmbeddingSize.toString())
-            put("CLIP Mode", if (config.useCpuClip) "CPU" else "NPU")
-            put("Resolution", "${config.width}×${config.height}")
-            put("Port", config.httpPort.toString())
-
-            if (config.isPony) {
-                put("Model Variant", "Pony v6")
-            }
-
-            if (config.safetyMode) {
-                put("Safety Checker", "Enabled")
-            }
-
-            // Check for available components
-            val components = mutableListOf<String>()
-            if (File(modelDir, "unet.bin").exists() || File(modelDir, "unet.mnn").exists()) {
-                components.add("UNet")
-            }
-            if (File(modelDir, "vae_decoder.bin").exists() || File(
-                    modelDir,
-                    "vae_decoder.mnn"
-                ).exists()
-            ) {
-                components.add("VAE Decoder")
-            }
-            if (File(modelDir, "vae_encoder.bin").exists() || File(
-                    modelDir,
-                    "vae_encoder.mnn"
-                ).exists()
-            ) {
-                components.add("VAE Encoder")
-            }
-            if (File(modelDir, "clip_v2.mnn").exists() || File(modelDir, "clip.mnn").exists()) {
-                components.add("CLIP")
-            }
-
-            if (components.isNotEmpty()) {
-                put("Components", components.joinToString(", "))
-            }
-
-            // Check for patch files
-            val patches = modelDir.listFiles { file ->
-                file.name.endsWith(".patch")
-            }?.map { it.nameWithoutExtension } ?: emptyList()
-
-            if (patches.isNotEmpty()) {
-                put("Available Resolutions", patches.joinToString(", "))
-            }
-        }
-    }
-
-    private fun parseGGUFInfo(jsonString: String): ModelInfo {
-        return try {
-            val json = JSONObject(jsonString)
-
-            val parameters = buildMap {
-                if (json.has("n_vocab")) {
-                    put("Vocabulary Size", formatNumber(json.getInt("n_vocab")))
-                }
-                if (json.has("n_ctx_train")) {
-                    put("Context Length", formatNumber(json.getInt("n_ctx_train")))
-                }
-                if (json.has("n_embd")) {
-                    put("Embedding Dim", formatNumber(json.getInt("n_embd")))
-                }
-                if (json.has("n_layer")) {
-                    put("Layers", json.getInt("n_layer").toString())
-                }
-                if (json.has("n_head")) {
-                    put("Attention Heads", json.getInt("n_head").toString())
-                }
-                if (json.has("n_head_kv")) {
-                    put("KV Heads", json.getInt("n_head_kv").toString())
-                }
-            }
-
-            val vocabularyInfo = buildMap<String, String> {
-                if (json.has("vocab_type")) {
-                    put("Type", json.getString("vocab_type").uppercase())
-                }
-                if (json.has("bos")) {
-                    put("BOS Token", json.getInt("bos").toString())
-                }
-                if (json.has("eos")) {
-                    put("EOS Token", json.getInt("eos").toString())
-                }
-                if (json.has("eot")) {
-                    put("EOT Token", json.getInt("eot").toString())
-                }
-                if (json.has("nl")) {
-                    put("Newline Token", json.getInt("nl").toString())
-                }
-            }.takeIf { it.isNotEmpty() }
-
-            GGUFModelInfo(
-                providerType = ProviderType.GGUF,
-                architecture = json.optString("architecture"),
-                name = json.optString("name"),
-                description = json.optString("description"),
-                parameters = parameters,
-                vocabularyInfo = vocabularyInfo,
-                systemInfo = json.optString("system"),
-                chatTemplate = json.optString("chat_template"),
-                templateType = json.optString("template_type")
+    private suspend fun loadGGUFModel(model: Model, config: ModelConfig?): ModelLoadResult {
+        val engine = GGUFEngine()
+        val success = engine.load(model, config ?: ModelConfig(modelId = model.id))
+        
+        return if (success) {
+            ModelLoadResult.Success(
+                info = GGUFModelInfo(
+                    providerType = ProviderType.GGUF,
+                    architecture = engine.getModelInfo() ?: "Unknown",
+                    name = model.modelName,
+                    description = "GGUF Model"
+                ),
+                engine = engine
             )
-        } catch (e: Exception) {
-            GGUFModelInfo(
-                providerType = ProviderType.GGUF,
-                architecture = "",
-                name = "",
-                description = "Error: ${e.message}"
-            )
+        } else {
+            ModelLoadResult.Error("Failed to load GGUF model")
         }
     }
 
-
-    suspend fun unloadModel(engine: Any?) = withContext(Dispatchers.IO) {
-        when (engine) {
-            is GGUFEngine -> engine.unload()
-            is String -> {
-                if (engine == "DiffusionEngine") {
-                    LlmModelWorker.stopDiffusionBackend()
-                }
-            }
-        }
-    }
-
-    fun checksumSHA256(modelPath: String): String {
-        val file = File(modelPath)
-
-        // For directories (diffusion models), use directory name + metadata
-        if (file.isDirectory) {
-            return checksumDirectory(file)
-        }
-
-        // Fast partial hash: first 4 MB + file metadata
-        val digest = MessageDigest.getInstance("SHA-256")
-        digest.update(file.name.toByteArray())
-        digest.update(file.length().toString().toByteArray())
-
-        val limit = 4L * 1024 * 1024
-        file.inputStream().use { input ->
-            val buffer = ByteArray(8 * 1024)
-            var remaining = limit
-            while (remaining > 0) {
-                val toRead = minOf(buffer.size.toLong(), remaining).toInt()
-                val len = input.read(buffer, 0, toRead)
-                if (len <= 0) break
-                digest.update(buffer, 0, len)
-                remaining -= len
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
-
-    /**
-     * Fast partial SHA-256: hashes first 4 MB + file size + display name.
-     * Reading the entire multi-GB file caused OOM-kills on Oppo/Redmi devices
-     * whose OEM memory managers terminate long-running I/O.
-     */
-    fun checksumSHA256FromUri(context: Context, uri: Uri): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val fileSize = getFileSizeFromUri(context, uri)
-        val fileName = getFileNameFromUri(context, uri)
-
-        // Mix in metadata so identical-prefix files still differ
-        digest.update(fileName.toByteArray())
-        digest.update(fileSize.toString().toByteArray())
-
-        // Hash only the first 4 MB
-        val limit = 4L * 1024 * 1024
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            val buffer = ByteArray(8 * 1024)
-            var remaining = limit
-            while (remaining > 0) {
-                val toRead = minOf(buffer.size.toLong(), remaining).toInt()
-                val len = input.read(buffer, 0, toRead)
-                if (len <= 0) break
-                digest.update(buffer, 0, len)
-                remaining -= len
-            }
-        } ?: throw IllegalArgumentException("Cannot open input stream for URI: $uri")
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
-
-    /**
-     * Get file size from content:// URI
-     */
-    fun getFileSizeFromUri(context: Context, uri: Uri): Long {
-        return context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
-            pfd.statSize
-        } ?: 0L
+    private suspend fun loadDiffusionModel(model: Model, config: ModelConfig?): ModelLoadResult {
+        // Implementation for diffusion model loading
+        return ModelLoadResult.Error("Diffusion loading not implemented in parser yet")
     }
 
     /**
@@ -467,12 +192,11 @@ sealed class ModelLoadResult {
     data class Success(
         val info: ModelInfo, val engine: Any // Can be GGUFEngine, "DiffusionEngine", etc.
     ) : ModelLoadResult()
-
     data class Error(val message: String) : ModelLoadResult()
 }
 
 /**
- * Base interface for model information
+ * Common interface for model information
  */
 interface ModelInfo {
     val providerType: ProviderType
@@ -580,8 +304,34 @@ data class DiffusionInferenceParams(
         DPM("dpm"), EULER("euler"), EULER_A("euler_a"), DDIM("ddim"), PNDM("pndm");
 
         companion object {
-            fun fromString(value: String): Scheduler {
-                return entries.find { it.value == value } ?: DPM
+            fun fromString(value: String): Scheduler =
+                entries.find { it.value == value.lowercase() } ?: DPM
+        }
+    }
+}
+
+/**
+ * Configuration for TTS models
+ */
+data class TtsConfig(
+    val useNNAPI: Boolean = false
+) {
+    fun toJson(): String {
+        return JSONObject().apply {
+            put("use_nnapi", useNNAPI)
+        }.toString()
+    }
+
+    companion object {
+        fun fromJson(jsonString: String?): TtsConfig {
+            if (jsonString == null) return TtsConfig()
+            return try {
+                val json = JSONObject(jsonString)
+                TtsConfig(
+                    useNNAPI = json.optBoolean("use_nnapi", false)
+                )
+            } catch (_: Exception) {
+                TtsConfig()
             }
         }
     }

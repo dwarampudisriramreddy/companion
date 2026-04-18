@@ -173,8 +173,6 @@ private fun DiaryEntryCard(
                     MetadataSection(title = "Events", items = entry.events, icon = TnIcons.Sparkles)
                 }
             }
-            
-            }
         }
     }
 }
