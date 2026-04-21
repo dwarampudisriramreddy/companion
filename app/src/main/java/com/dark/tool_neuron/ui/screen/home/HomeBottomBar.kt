@@ -435,10 +435,10 @@ internal fun BottomBar(
                         },
                         checked = isRecordingVoice,
                         icon = if (isRecordingVoice) TnIcons.PlayerStop else TnIcons.Microphone,
-                        colors = if (isRecordingVoice) IconButtonDefaults.filledTonalIconButtonColors(
+                        colors = if (isRecordingVoice) IconButtonDefaults.filledIconToggleButtonColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                             contentColor = MaterialTheme.colorScheme.error
-                        ) else IconButtonDefaults.filledTonalIconButtonColors()
+                        ) else IconButtonDefaults.filledIconToggleButtonColors()
                     )
 
                     Spacer(Modifier.weight(1f))
