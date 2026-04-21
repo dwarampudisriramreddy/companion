@@ -113,6 +113,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val systemPrompt: StateFlow<String> = appSettingsDataStore.systemPrompt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
+    val userName: StateFlow<String?> = appSettingsDataStore.userName
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val companionName: StateFlow<String?> = appSettingsDataStore.companionName
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     // Hardware tuning
     val hardwareTuningEnabled: StateFlow<Boolean> = appSettingsDataStore.hardwareTuningEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -196,6 +202,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setSystemPrompt(prompt: String) {
         viewModelScope.launch { appSettingsDataStore.updateSystemPrompt(prompt) }
+    }
+
+    fun setUserName(name: String) {
+        viewModelScope.launch { appSettingsDataStore.updateUserName(name) }
+    }
+
+    fun setCompanionName(name: String) {
+        viewModelScope.launch { appSettingsDataStore.updateCompanionName(name) }
     }
 
     fun setHardwareTuningEnabled(enabled: Boolean) {

@@ -26,9 +26,6 @@ class UmsDiaryRepository(private val ums: UnifiedMemorySystem) {
             .putString(Tags.Diary.TOPIC, entry.topic)
             .apply {
                 if (entry.mood != null) putString(Tags.Diary.MOOD, entry.mood)
-                putString(Tags.Diary.PLACES, listToJson(entry.places))
-                putString(Tags.Diary.PEOPLE, listToJson(entry.people))
-                putString(Tags.Diary.EVENTS, listToJson(entry.events))
             }
             .build()
         ums.put(diaryCollection, record)
@@ -57,10 +54,7 @@ class UmsDiaryRepository(private val ums: UnifiedMemorySystem) {
         content = getString(Tags.Diary.CONTENT) ?: "",
         createdAt = getTimestamp(Tags.Diary.CREATED_AT) ?: 0L,
         topic = getString(Tags.Diary.TOPIC) ?: "Self",
-        mood = getString(Tags.Diary.MOOD),
-        places = jsonToList(getString(Tags.Diary.PLACES)),
-        people = jsonToList(getString(Tags.Diary.PEOPLE)),
-        events = jsonToList(getString(Tags.Diary.EVENTS))
+        mood = getString(Tags.Diary.MOOD)
     )
 
     private fun listToJson(list: List<String>): String {

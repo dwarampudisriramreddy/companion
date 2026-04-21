@@ -37,6 +37,8 @@ class AppSettingsDataStore(private val context: Context) {
         private val PERFORMANCE_MODE = stringPreferencesKey("performance_mode")
         private val ASK_MODEL_RELOAD_DIALOG = booleanPreferencesKey("ask_model_reload_dialog")
         private val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
+        private val USER_NAME = stringPreferencesKey("user_name")
+        private val COMPANION_NAME = stringPreferencesKey("companion_name")
         private val APP_OPEN_COUNT = androidx.datastore.preferences.core.intPreferencesKey("app_open_count")
         private val TIME_SPENT_MS = androidx.datastore.preferences.core.longPreferencesKey("time_spent_ms")
     }
@@ -254,6 +256,17 @@ class AppSettingsDataStore(private val context: Context) {
 
     suspend fun updateAskModelReloadDialog(enabled: Boolean) {
         context.appSettingsDataStore.edit { it[ASK_MODEL_RELOAD_DIALOG] = enabled }
+    }
+
+    val userName: Flow<String?> = context.appSettingsDataStore.data.map { it[USER_NAME] }
+    val companionName: Flow<String?> = context.appSettingsDataStore.data.map { it[COMPANION_NAME] }
+
+    suspend fun updateUserName(name: String) {
+        context.appSettingsDataStore.edit { it[USER_NAME] = name }
+    }
+
+    suspend fun updateCompanionName(name: String) {
+        context.appSettingsDataStore.edit { it[COMPANION_NAME] = name }
     }
 
     suspend fun clear() {

@@ -28,7 +28,7 @@ fun HomeDrawerScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Conversation Info", style = MaterialTheme.typography.titleLarge) }
+                title = { Text("Vault Manager", style = MaterialTheme.typography.titleLarge) }
             )
         }
     ) { paddingValues ->
@@ -47,7 +47,7 @@ fun HomeDrawerScreen(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = TnIcons.Sparkles,
+                        imageVector = TnIcons.Vault,
                         contentDescription = null,
                         modifier = Modifier.size(40.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
@@ -56,13 +56,13 @@ fun HomeDrawerScreen(
             }
 
             Text(
-                text = "Single Chat Mode",
+                text = "Memory Vault",
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 textAlign = TextAlign.Center
             )
 
             Text(
-                text = "All your messages are stored in a single persistent conversation.",
+                text = "Manage your long-term memories and chat history.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -89,9 +89,9 @@ fun HomeDrawerScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(Standards.RadiusMd)
             ) {
-                Icon(TnIcons.Vault, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(TnIcons.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(Standards.SpacingSm))
-                Text("Vault Manager")
+                Text("Search Memories")
             }
         }
     }

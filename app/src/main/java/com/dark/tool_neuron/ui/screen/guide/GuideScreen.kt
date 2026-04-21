@@ -45,7 +45,7 @@ fun GuideScreen(
         Spacer(Modifier.height(Standards.SpacingXl))
 
         Text(
-            text = "Welcome to ToolNeuron",
+            text = "Welcome to Companion",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,

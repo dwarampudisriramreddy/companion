@@ -534,13 +534,28 @@ class ChatViewModel @Inject constructor(
         currentMetrics = null
         _error.value = null
 
+        val base64Img = LlmModelWorker.bytesToBase64(imageData.firstOrNull() ?: ByteArray(0))
+        
+        // Save to AI Memories for sharing/download later
+        viewModelScope.launch {
+            VaultManager.memoryRepo?.insert(
+                com.dark.tool_neuron.models.table_schema.AiMemory(
+                    fact = "Uploaded Image: ${if (prompt.isNotBlank()) prompt else "No description"}",
+                    category = com.dark.tool_neuron.models.table_schema.MemoryCategory.GENERAL,
+                    sourceChatId = "default_chat",
+                    contentType = 2, // Image
+                    imageData = base64Img
+                )
+            )
+        }
+
         currentUserMessage = Messages(
             msgId = "",
             role = Role.User,
             content = MessageContent(
                 contentType = ContentType.TextWithImage, 
                 content = prompt,
-                imageData = LlmModelWorker.bytesToBase64(imageData.firstOrNull() ?: ByteArray(0))
+                imageData = base64Img
             ),
             modelId = currentModelId,
         )
@@ -1420,6 +1435,8 @@ class ChatViewModel @Inject constructor(
     private suspend fun getCurrentModelSystemPrompt(userQuery: String = ""): String {
         val basePrompt = getGgufModelSchema().inferenceParams.systemPrompt
         val globalPrompt = appSettings.systemPrompt.first()
+        val userName = appSettings.userName.first()
+        val companionName = appSettings.companionName.first()
 
         val hasActiveTools = PluginManager.hasEnabledTools()
             && PluginManager.isToolCallingModelLoaded.value
@@ -1427,6 +1444,12 @@ class ChatViewModel @Inject constructor(
 
         return buildString {
             append(thinkingDirective)
+            
+            if (userName != null || companionName != null) {
+                append("\n\n### Identity:\n")
+                if (userName != null) append("- The user's name is $userName.\n")
+                if (companionName != null) append("- Your name is $companionName.\n")
+            }
             
             // Global prompt formatted as rules
             if (globalPrompt.isNotEmpty()) {
@@ -1879,12 +1902,44 @@ class ChatViewModel @Inject constructor(
                 val entry = com.dark.tool_neuron.models.diary.DiaryEntry(
                     content = content,
                     topic = json.optString("topic", "Self"),
-                    mood = json.optString("mood", "Reflective"),
-                    places = jsonArrayToList(json.optJSONArray("places")),
-                    people = jsonArrayToList(json.optJSONArray("people")),
-                    events = jsonArrayToList(json.optJSONArray("events"))
+                    mood = json.optString("mood", "Reflective")
                 )
                 VaultManager.diaryRepo?.insert(entry)
+
+                // Save people, events and places to AI Memories
+                val people = jsonArrayToList(json.optJSONArray("people"))
+                val events = jsonArrayToList(json.optJSONArray("events"))
+                val places = jsonArrayToList(json.optJSONArray("places"))
+
+                people.forEach { person ->
+                    VaultManager.memoryRepo?.insert(
+                        com.dark.tool_neuron.models.table_schema.AiMemory(
+                            fact = person,
+                            category = com.dark.tool_neuron.models.table_schema.MemoryCategory.PEOPLE,
+                            sourceChatId = "default_chat"
+                        )
+                    )
+                }
+
+                events.forEach { event ->
+                    VaultManager.memoryRepo?.insert(
+                        com.dark.tool_neuron.models.table_schema.AiMemory(
+                            fact = event,
+                            category = com.dark.tool_neuron.models.table_schema.MemoryCategory.EVENT,
+                            sourceChatId = "default_chat"
+                        )
+                    )
+                }
+
+                places.forEach { place ->
+                    VaultManager.memoryRepo?.insert(
+                        com.dark.tool_neuron.models.table_schema.AiMemory(
+                            fact = place,
+                            category = com.dark.tool_neuron.models.table_schema.MemoryCategory.PLACE,
+                            sourceChatId = "default_chat"
+                        )
+                    )
+                }
             }
         } catch (e: Exception) {
             Log.e("ChatViewModel", "Diary extraction failed: ${e.message}")

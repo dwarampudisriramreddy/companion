@@ -136,7 +136,7 @@ internal fun BottomBar(
             try {
                 context.contentResolver.openInputStream(cameraPhotoUri)?.use { input ->
                     val bytes = input.readBytes()
-                    val prompt = if (value.isNotBlank()) value else "Describe this image"
+                    val prompt = value
                     chatViewModel.sendChatWithImages(prompt, listOf(bytes))
                     value = ""
                 }
@@ -280,7 +280,7 @@ internal fun BottomBar(
                             Text(
                                 text = when (chatState.generationType) {
                                     ModelType.TEXT_GENERATION -> "Say Anything…"
-                                    ModelType.IMAGE_GENERATION -> "Describe the image you want…"
+                                    ModelType.IMAGE_GENERATION -> "Create Anything…"
                                     ModelType.AUDIO_GENERATION -> "Say Anything…"
                                 }
                             )

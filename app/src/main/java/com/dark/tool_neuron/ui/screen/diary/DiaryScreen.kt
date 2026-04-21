@@ -159,20 +159,6 @@ private fun DiaryEntryCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
-
-            if (entry.places.isNotEmpty() || entry.people.isNotEmpty() || entry.events.isNotEmpty()) {
-                Spacer(Modifier.height(Standards.SpacingMd))
-                
-                if (entry.places.isNotEmpty()) {
-                    MetadataSection(title = "Places", items = entry.places, icon = TnIcons.World)
-                }
-                if (entry.people.isNotEmpty()) {
-                    MetadataSection(title = "People", items = entry.people, icon = TnIcons.User)
-                }
-                if (entry.events.isNotEmpty()) {
-                    MetadataSection(title = "Events", items = entry.events, icon = TnIcons.Sparkles)
-                }
-            }
         }
     }
 }

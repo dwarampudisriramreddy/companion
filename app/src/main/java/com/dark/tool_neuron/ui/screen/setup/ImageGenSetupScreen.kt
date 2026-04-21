@@ -344,7 +344,7 @@ private fun ReadyContent(
             )
 
             Text(
-                "ToolNeuron needs to download QNN libraries and the safety checker to enable on-device image generation. This is a one-time setup.",
+                "Companion needs to download QNN libraries and the safety checker to enable on-device image generation. This is a one-time setup.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

@@ -446,5 +446,8 @@ private fun categoryLabel(category: MemoryCategory): String {
         MemoryCategory.INTEREST -> "Interest"
         MemoryCategory.GENERAL -> "General"
         MemoryCategory.PINNED -> "Pinned"
+        MemoryCategory.EVENT -> "Event"
+        MemoryCategory.PEOPLE -> "People"
+        MemoryCategory.PLACE -> "Place"
     }
 }

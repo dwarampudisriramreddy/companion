@@ -12,7 +12,10 @@ enum class MemoryCategory {
     WORK,
     INTEREST,
     GENERAL,
-    PINNED
+    PINNED,
+    EVENT,
+    PEOPLE,
+    PLACE
 }
 
 @Entity(

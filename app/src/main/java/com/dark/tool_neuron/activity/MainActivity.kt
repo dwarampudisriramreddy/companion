@@ -125,12 +125,30 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) {
                     withContext(Dispatchers.IO) {
                         // Parallelize DataStore reads — each opens a separate file
-                        val (termsAccepted, setupDone, guideSeen) = coroutineScope {
+                        val (termsAccepted, setupDone, guideSeen, userName, companionName) = coroutineScope {
                             val t = async { TermsDataStore(context).hasAcceptedTerms.first() }
                             val s = async { SetupDataStore(context).isSetupDone.first() }
                             val g = async { AppSettingsDataStore(context).guideSeen.first() }
-                            Triple(t.await(), s.await(), g.await())
+                            val u = async { AppSettingsDataStore(context).userName.first() }
+                            val c = async { AppSettingsDataStore(context).companionName.first() }
+                            val results = awaitAll(t, s, g, u, c)
+                            @Suppress("UNCHECKED_CAST")
+                            val userNameValue = results[3] as String?
+                            @Suppress("UNCHECKED_CAST")
+                            val companionNameValue = results[4] as String?
+                            
+                            val termsAcceptedValue = results[0] as Boolean
+                            val setupDoneValue = results[1] as Boolean
+                            val guideSeenValue = results[2] as Boolean
+                            
+                            java.util.concurrent.CopyOnWriteArrayList(listOf(termsAcceptedValue, setupDoneValue, guideSeenValue, userNameValue, companionNameValue))
                         }
+
+                        val termsAcceptedValue = termsAccepted[0] as Boolean
+                        val setupDoneValue = termsAccepted[1] as Boolean
+                        val guideSeenValue = termsAccepted[2] as Boolean
+                        val userNameValue = termsAccepted[3] as String?
+                        val companionNameValue = termsAccepted[4] as String?
 
                         // Auto-init vault for returning users (exists on disk but not yet opened)
                         if (!VaultManager.isReady.value && VaultManager.exists(context)) {
@@ -158,23 +176,26 @@ class MainActivity : ComponentActivity() {
                         hasModelsInstalled = hasModel
 
                         startDestination = when {
-                            // Returning user: vault ready + terms accepted + (setup done or has model)
-                            vaultReady && termsAccepted && (setupDone || hasModel) -> Screen.Chat.route
+                            // Returning user: vault ready + terms accepted + names set + (setup done or has model)
+                            vaultReady && termsAcceptedValue && userNameValue != null && companionNameValue != null && (setupDoneValue || hasModel) -> Screen.Chat.route
 
                             // Vault ready but terms not accepted
-                            vaultReady && !termsAccepted -> Screen.Terms.route
+                            vaultReady && !termsAcceptedValue -> Screen.Terms.route
+                            
+                            // Names not set
+                            vaultReady && (userNameValue == null || companionNameValue == null) -> Screen.NameSetup.route
 
                             // Vault ready but setup not done
-                            vaultReady && !setupDone && !hasModel -> Screen.OnboardingSetup.route
+                            vaultReady && !setupDoneValue && !hasModel -> Screen.OnboardingSetup.route
 
                             // First launch: show intro
-                            !guideSeen -> Screen.Intro.route
+                            !guideSeenValue -> Screen.Intro.route
 
                             // Needs migration and vault not ready: go to migration
                             needsMigration && !vaultReady -> Screen.Migration.route
 
                             // Guide seen but terms not accepted
-                            !termsAccepted -> Screen.Terms.route
+                            !termsAcceptedValue -> Screen.Terms.route
 
                             // Fallback: go to setup (which handles vault init if needed)
                             else -> Screen.OnboardingSetup.route
@@ -208,6 +229,7 @@ sealed class Screen(val route: String) {
     object Guide : Screen("guide")
     object Migration : Screen("migration")
     object Terms : Screen("terms")
+    object NameSetup : Screen("name_setup")
     object OnboardingSetup : Screen("setup")
 
     // Main app
@@ -304,15 +326,23 @@ fun AppNavigation(
                     scope.launch {
                         termsDataStore.acceptTerms()
                     }
+                    navController.navigate(Screen.NameSetup.route) {
+                        popUpTo(Screen.Terms.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.NameSetup.route) {
+            com.dark.tool_neuron.ui.screen.setup.NameSetupScreen(
+                onComplete = {
                     if (hasModelsInstalled) {
-                        // Returning user: skip setup, go to chat
                         navController.navigate(Screen.Chat.route) {
                             popUpTo(0) { inclusive = true }
                         }
                     } else {
-                        // New user: proceed to setup
                         navController.navigate(Screen.OnboardingSetup.route) {
-                            popUpTo(Screen.Terms.route) { inclusive = true }
+                            popUpTo(Screen.NameSetup.route) { inclusive = true }
                         }
                     }
                 }

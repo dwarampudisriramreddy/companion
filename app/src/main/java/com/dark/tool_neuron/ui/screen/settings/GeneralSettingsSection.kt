@@ -575,7 +575,7 @@ internal fun LazyListScope.aboutSection(appVersion: String) {
 
     item {
         StandardCard(
-            title = "ToolNeuron",
+            title = "Companion",
             description = "On-device AI — LLM, Image Generation, TTS"
         ) {
             BodyLabel(
