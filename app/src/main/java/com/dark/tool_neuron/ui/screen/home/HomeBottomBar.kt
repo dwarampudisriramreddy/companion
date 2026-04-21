@@ -422,7 +422,7 @@ internal fun BottomBar(
 
                     // 7. Voice Recorder
                     ActionToggleButton(
-                        onCheckedChange = { recording ->
+                        onCheckedChange = { recording: Boolean ->
                             if (recording) {
                                 audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                             } else {

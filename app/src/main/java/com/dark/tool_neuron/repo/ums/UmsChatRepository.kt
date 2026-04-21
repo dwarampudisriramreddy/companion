@@ -244,11 +244,11 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
                     0 -> ContentType.None
                     1 -> ContentType.Text
                     2 -> ContentType.Image
-                    ContentType.TextWithImage -> 3
-                    ContentType.PluginResult -> 4
+                    3 -> ContentType.TextWithImage
+                    4 -> ContentType.PluginResult
                     5 -> ContentType.Audio
                     else -> ContentType.Text
-                    },
+                },
                     content = getString(Tags.Message.CONTENT) ?: "",
                     imageData = getString(Tags.Message.IMAGE_DATA),
                     imagePrompt = getString(Tags.Message.IMAGE_PROMPT),

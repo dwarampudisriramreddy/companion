@@ -150,6 +150,7 @@ object TnIcons {
 
     // ── Audio ──
     val Volume by lazy { tabler("M15 8a5 5 0 0 1 0 8", "M17.7 5a9 9 0 0 1 0 14", "M6 15h-2a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h2l3.5 -4.5a.8 .8 0 0 1 1.5 .5v14a.8 .8 0 0 1 -1.5 .5l-3.5 -4.5") }
+    val Microphone by lazy { tabler("M9 4a3 3 0 0 0 -3 3v7a3 3 0 0 0 6 0v-7a3 3 0 0 0 -3 -3z", "M5 10a7 7 0 0 0 14 0", "M8 21l8 0", "M12 17l0 4") }
 
     // ── Misc ──
     val ArrowsExchange by lazy { tabler("M7 10h14l-4 -4", "M17 14h-14l4 4") }
