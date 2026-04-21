@@ -39,6 +39,7 @@ class AppSettingsDataStore(private val context: Context) {
         private val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
         private val USER_NAME = stringPreferencesKey("user_name")
         private val COMPANION_NAME = stringPreferencesKey("companion_name")
+        private val PERSONALITY_TYPE = stringPreferencesKey("personality_type")
         private val APP_OPEN_COUNT = androidx.datastore.preferences.core.intPreferencesKey("app_open_count")
         private val TIME_SPENT_MS = androidx.datastore.preferences.core.longPreferencesKey("time_spent_ms")
     }
