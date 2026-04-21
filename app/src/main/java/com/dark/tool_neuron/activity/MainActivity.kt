@@ -125,30 +125,22 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) {
                     withContext(Dispatchers.IO) {
                         // Parallelize DataStore reads — each opens a separate file
-                        val (termsAccepted, setupDone, guideSeen, userName, companionName) = coroutineScope {
+                        val results = coroutineScope {
                             val t = async { TermsDataStore(context).hasAcceptedTerms.first() }
                             val s = async { SetupDataStore(context).isSetupDone.first() }
                             val g = async { AppSettingsDataStore(context).guideSeen.first() }
                             val u = async { AppSettingsDataStore(context).userName.first() }
                             val c = async { AppSettingsDataStore(context).companionName.first() }
-                            val results = awaitAll(t, s, g, u, c)
-                            @Suppress("UNCHECKED_CAST")
-                            val userNameValue = results[3] as String?
-                            @Suppress("UNCHECKED_CAST")
-                            val companionNameValue = results[4] as String?
                             
-                            val termsAcceptedValue = results[0] as Boolean
-                            val setupDoneValue = results[1] as Boolean
-                            val guideSeenValue = results[2] as Boolean
-                            
-                            java.util.concurrent.CopyOnWriteArrayList(listOf(termsAcceptedValue, setupDoneValue, guideSeenValue, userNameValue, companionNameValue))
+                            // Await all in parallel and return as a simple list
+                            listOf(t.await(), s.await(), g.await(), u.await(), c.await())
                         }
 
-                        val termsAcceptedValue = termsAccepted[0] as Boolean
-                        val setupDoneValue = termsAccepted[1] as Boolean
-                        val guideSeenValue = termsAccepted[2] as Boolean
-                        val userNameValue = termsAccepted[3] as String?
-                        val companionNameValue = termsAccepted[4] as String?
+                        val termsAcceptedValue = results[0] as Boolean
+                        val setupDoneValue = results[1] as Boolean
+                        val guideSeenValue = results[2] as Boolean
+                        val userNameValue = results[3] as String?
+                        val companionNameValue = results[4] as String?
 
                         // Auto-init vault for returning users (exists on disk but not yet opened)
                         if (!VaultManager.isReady.value && VaultManager.exists(context)) {
