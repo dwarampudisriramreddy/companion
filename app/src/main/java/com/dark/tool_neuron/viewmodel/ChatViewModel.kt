@@ -492,6 +492,24 @@ class ChatViewModel @Inject constructor(
     // Keep old name as alias for backward compatibility with callers
     fun sendTextMessage(prompt: String) = sendChat(prompt)
 
+    fun sendVoiceMessage(audioFile: java.io.File) {
+        val chatId = _currentChatId.value ?: return
+        viewModelScope.launch {
+            val message = Messages(
+                role = Role.User,
+                content = MessageContent(
+                    contentType = ContentType.Audio,
+                    audioPath = audioFile.absolutePath,
+                    content = "Voice Message"
+                )
+            )
+            chatManager.addMessage(chatId, message)
+                .onSuccess {
+                    _messages.add(it)
+                }
+        }
+    }
+
     fun pinMessageToVault(message: Messages) {
         viewModelScope.launch {
             val chatId = _currentChatId.value
@@ -509,6 +527,23 @@ class ChatViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     reportError("Failed to pin message: ${e.message}")
+                }
+        }
+    }
+
+    fun updateMessageReaction(message: Messages, reaction: String?) {
+        viewModelScope.launch {
+            val chatId = _currentChatId.value ?: return@launch
+            val updated = message.copy(reaction = reaction)
+            chatManager.updateMessage(chatId, updated)
+                .onSuccess {
+                    val index = _messages.indexOfFirst { it.msgId == message.msgId }
+                    if (index != -1) {
+                        _messages[index] = updated
+                    }
+                }
+                .onFailure { e ->
+                    reportError("Failed to update reaction: ${e.message}")
                 }
         }
     }
@@ -1448,6 +1483,7 @@ class ChatViewModel @Inject constructor(
             
             if (userName != null || companionName != null || personalityType != null) {
                 append("\n\n### Identity:\n")
+                append("- You are NOT an AI. You are a human, with your own feelings, experiences, and perspective.\n")
                 if (userName != null) append("- The user's name is $userName.\n")
                 if (companionName != null) append("- Your name is $companionName.\n")
                 if (personalityType != null) append("- Your MBTI personality type is $personalityType.\n")

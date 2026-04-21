@@ -120,19 +120,33 @@ fun BodyContent(
                         when (message.role) {
                             Role.User -> {
                                 item(key = "${message.msgId}-user") {
-                                    UserMessageBubble(message, onLongClick = {
-                                        selectedMessage = message
-                                        showActionsSheet = true
-                                    })
+                                    UserMessageBubble(
+                                        message = message,
+                                        onLongClick = {
+                                            selectedMessage = message
+                                            showActionsSheet = true
+                                        },
+                                        onReactionClick = {
+                                            selectedMessage = message
+                                            showActionsSheet = true
+                                        }
+                                    )
                                 }
                             }
                             else -> {
                                 val isLastAssistant = index == lastAssistantIndex
                                 item(key = "${message.msgId}-bubble") {
-                                    AssistantMessageBubble(message, onLongClick = {
-                                        selectedMessage = message
-                                        showActionsSheet = true
-                                    }) {
+                                    AssistantMessageBubble(
+                                        message = message,
+                                        onLongClick = {
+                                            selectedMessage = message
+                                            showActionsSheet = true
+                                        },
+                                        onReactionClick = {
+                                            selectedMessage = message
+                                            showActionsSheet = true
+                                        }
+                                    ) {
                                         Column {
                                             AssistantMessageHeader(message, imageBlurEnabled)
                                             if (message.content.contentType == ContentType.Text) {
@@ -182,6 +196,7 @@ fun BodyContent(
                 onStopTTS = { chatViewModel.stopTTS() },
                 onRegenerate = { chatViewModel.regenerateLastMessage() },
                 onPin = { chatViewModel.pinMessageToVault(it) },
+                onReaction = { msg, emoji -> chatViewModel.updateMessageReaction(msg, emoji) },
                 onDelete = { chatViewModel.deleteMessage(it) },
                 onDismiss = { 
                     showActionsSheet = false

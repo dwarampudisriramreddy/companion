@@ -101,6 +101,14 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
             .takeLast(limit)
     }
 
+    suspend fun getAllReactedMessages(): List<Messages> = withContext(Dispatchers.IO) {
+        ums.getAll(msgCollection)
+            .map { it.toMessages() }
+            .filter { it.reaction != null }
+            .distinctBy { it.msgId }
+            .sortedByDescending { it.timestamp }
+    }
+
     private suspend fun updateChatStats(chatId: String) {
         val chatRecord = ums.queryString(chatCollection, Tags.Chat.CHAT_ID, chatId).firstOrNull() ?: return
         val messages = ums.queryString(msgCollection, Tags.Message.CHAT_ID, chatId)
@@ -195,11 +203,13 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
             ContentType.Image -> 2
             ContentType.TextWithImage -> 3
             ContentType.PluginResult -> 4
+            ContentType.Audio -> 5
         })
         b.putString(Tags.Message.CONTENT, content.content)
         if (content.imageData != null) b.putString(Tags.Message.IMAGE_DATA, content.imageData)
         if (content.imagePrompt != null) b.putString(Tags.Message.IMAGE_PROMPT, content.imagePrompt)
         if (content.imageSeed != null) b.putTimestamp(Tags.Message.IMAGE_SEED, content.imageSeed)
+        if (content.audioPath != null) b.putString(Tags.Message.AUDIO_PATH, content.audioPath)
         b.putTimestamp(Tags.Message.TIMESTAMP, timestamp)
         if (modelId != null) b.putString(Tags.Message.MODEL_ID, modelId)
         if (personaId != null) b.putString(Tags.Message.PERSONA_ID, personaId)
@@ -211,6 +221,7 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
         agentPlan?.let { b.putString(Tags.Message.AGENT_PLAN, it) }
         agentSummary?.let { b.putString(Tags.Message.AGENT_SUMMARY, it) }
         b.putInt(Tags.Message.IS_PINNED, if (isPinned) 1 else 0)
+        if (reaction != null) b.putString(Tags.Message.REACTION, reaction)
 
         return b.build()
     }
@@ -233,15 +244,17 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
                     0 -> ContentType.None
                     1 -> ContentType.Text
                     2 -> ContentType.Image
-                    3 -> ContentType.TextWithImage
-                    4 -> ContentType.PluginResult
+                    ContentType.TextWithImage -> 3
+                    ContentType.PluginResult -> 4
+                    5 -> ContentType.Audio
                     else -> ContentType.Text
-                },
-                content = getString(Tags.Message.CONTENT) ?: "",
-                imageData = getString(Tags.Message.IMAGE_DATA),
-                imagePrompt = getString(Tags.Message.IMAGE_PROMPT),
-                imageSeed = getTimestamp(Tags.Message.IMAGE_SEED)
-            ),
+                    },
+                    content = getString(Tags.Message.CONTENT) ?: "",
+                    imageData = getString(Tags.Message.IMAGE_DATA),
+                    imagePrompt = getString(Tags.Message.IMAGE_PROMPT),
+                    imageSeed = getTimestamp(Tags.Message.IMAGE_SEED),
+                    audioPath = getString(Tags.Message.AUDIO_PATH)
+                    ),
             timestamp = getTimestamp(Tags.Message.TIMESTAMP) ?: 0L,
             modelId = getString(Tags.Message.MODEL_ID),
             personaId = getString(Tags.Message.PERSONA_ID),
@@ -251,7 +264,8 @@ class UmsChatRepository(private val ums: UnifiedMemorySystem) {
             toolChainSteps = toolChainStepsJson?.let { runCatching { json.decodeFromString<List<ToolChainStepData>>(it) }.getOrNull() },
             agentPlan = getString(Tags.Message.AGENT_PLAN),
             agentSummary = getString(Tags.Message.AGENT_SUMMARY),
-            isPinned = isPinnedVal == 1
+            isPinned = isPinnedVal == 1,
+            reaction = getString(Tags.Message.REACTION)
         )
     }
 }

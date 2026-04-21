@@ -108,6 +108,7 @@ internal fun MessageActionsBottomSheet(
     onStopTTS: () -> Unit,
     onRegenerate: () -> Unit,
     onPin: (Messages) -> Unit,
+    onReaction: (Messages, String?) -> Unit,
     onDelete: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -131,6 +132,37 @@ internal fun MessageActionsBottomSheet(
                 .fillMaxWidth()
                 .padding(bottom = Standards.SpacingXl)
         ) {
+            // Reaction Row
+            val emojis = listOf("❤️", "👍", "👎", "🔥", "😂", "😮", "😢")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Standards.SpacingLg, vertical = Standards.SpacingMd),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                emojis.forEach { emoji ->
+                    Surface(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clickable {
+                                onReaction(message, if (message.reaction == emoji) null else emoji)
+                                onDismiss()
+                            },
+                        shape = CircleShape,
+                        color = if (message.reaction == emoji) 
+                                    MaterialTheme.colorScheme.primaryContainer 
+                                else Color.Transparent
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(text = emoji, fontSize = 20.sp)
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = Standards.SpacingSm))
+
             Text(
                 text = "Message Actions",
                 style = MaterialTheme.typography.titleMedium,

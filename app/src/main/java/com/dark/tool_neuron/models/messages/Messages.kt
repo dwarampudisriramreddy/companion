@@ -26,7 +26,8 @@ data class Messages(
     val toolChainSteps: List<ToolChainStepData>? = null,
     val agentPlan: String? = null,
     val agentSummary: String? = null,
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    val reaction: String? = null
 )
 
 @Serializable
@@ -59,7 +60,8 @@ data class MessageContent(
     val imageData: String? = null, // Base64 encoded image
     val imagePrompt: String? = null, // Original prompt used for image
     val imageSeed: Long? = null, // Seed used for image generation
-    val pluginResultData: PluginResultData? = null
+    val pluginResultData: PluginResultData? = null,
+    val audioPath: String? = null
 )
 
 @Serializable
@@ -87,7 +89,8 @@ enum class ContentType {
     Text,
     Image,
     TextWithImage, // For messages that contain both text and image
-    PluginResult
+    PluginResult,
+    Audio
 }
 
 @Serializable

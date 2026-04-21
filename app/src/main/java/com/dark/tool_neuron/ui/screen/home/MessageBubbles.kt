@@ -48,8 +48,10 @@ import java.util.*
 internal fun MessageBubble(
     isUser: Boolean,
     isPinned: Boolean = false,
+    reaction: String? = null,
     timestamp: Long? = null,
     onLongClick: (() -> Unit)? = null,
+    onReactionClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     Row(
@@ -63,39 +65,62 @@ internal fun MessageBubble(
             ),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
-        Surface(
-            shape = RoundedCornerShape(Standards.RadiusLg),
-            color = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier
-                .widthIn(max = 300.dp)
-                .combinedClickable(
-                    onClick = { /* placeholder for future use */ },
-                    onLongClick = onLongClick
-                ),
-            shadowElevation = 1.dp
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                if (isPinned) {
-                    Icon(
-                        imageVector = TnIcons.Vault,
-                        contentDescription = "Pinned",
-                        modifier = Modifier
-                            .size(14.dp)
-                            .align(Alignment.End)
-                            .padding(bottom = 2.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-                
-                content()
+        Column(horizontalAlignment = if (isUser) Alignment.End else Alignment.Start) {
+            Surface(
+                shape = RoundedCornerShape(Standards.RadiusLg),
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .widthIn(max = 300.dp)
+                    .combinedClickable(
+                        onClick = { /* placeholder for future use */ },
+                        onLongClick = onLongClick
+                    ),
+                shadowElevation = 1.dp
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    if (isPinned) {
+                        Icon(
+                            imageVector = TnIcons.Vault,
+                            contentDescription = "Pinned",
+                            modifier = Modifier
+                                .size(14.dp)
+                                .align(Alignment.End)
+                                .padding(bottom = 2.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
 
-                timestamp?.let { ts ->
+                    content()
+
+                    timestamp?.let { ts ->
+                        Text(
+                            text = formatTimestamp(ts),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = Color.Gray,
+                            modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            if (reaction != null) {
+                Surface(
+                    modifier = Modifier
+                        .offset(
+                            x = if (isUser) (-8).dp else 8.dp,
+                            y = (-12).dp
+                        )
+                        .clickable { onReactionClick?.invoke() },
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    shadowElevation = 2.dp
+                ) {
                     Text(
-                        text = formatTimestamp(ts),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = Color.Gray,
-                        modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+                        text = reaction,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        fontSize = 14.sp
                     )
                 }
             }
@@ -108,24 +133,104 @@ internal fun MessageBubble(
 @Composable
 internal fun UserMessageBubble(
     message: Messages,
-    onLongClick: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null,
+    onReactionClick: (() -> Unit)? = null
 ) {
     MessageBubble(
         isUser = true,
         isPinned = message.isPinned,
+        reaction = message.reaction,
         timestamp = message.timestamp,
-        onLongClick = onLongClick
+        onLongClick = onLongClick,
+        onReactionClick = onReactionClick
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (message.content.contentType == ContentType.TextWithImage && message.content.imageData != null) {
                 ImageMessageBubble(message, imageBlurEnabled = false)
             }
-            SelectionContainer {
-                MarkdownText(
-                    text = message.content.content,
-                    modifier = Modifier.padding(bottom = 2.dp)
-                )
+            
+            if (message.content.contentType == ContentType.Audio && message.content.audioPath != null) {
+                VoiceMessageBubble(audioPath = message.content.audioPath)
+            } else {
+                SelectionContainer {
+                    MarkdownText(
+                        text = message.content.content,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
             }
+        }
+    }
+}
+
+// ── VoiceMessageBubble ──
+
+@Composable
+internal fun VoiceMessageBubble(audioPath: String) {
+    var isPlaying by remember { mutableStateOf(false) }
+    val mediaPlayer = remember { android.media.MediaPlayer() }
+    
+    DisposableEffect(audioPath) {
+        onDispose {
+            mediaPlayer.release()
+        }
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .padding(Standards.SpacingSm)
+            .background(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                RoundedCornerShape(Standards.RadiusMd)
+            )
+            .padding(horizontal = Standards.SpacingMd, vertical = Standards.SpacingSm)
+    ) {
+        IconButton(
+            onClick = {
+                if (isPlaying) {
+                    mediaPlayer.stop()
+                    mediaPlayer.reset()
+                    isPlaying = false
+                } else {
+                    try {
+                        mediaPlayer.setDataSource(audioPath)
+                        mediaPlayer.prepare()
+                        mediaPlayer.setOnCompletionListener {
+                            isPlaying = false
+                            mediaPlayer.reset()
+                        }
+                        mediaPlayer.start()
+                        isPlaying = true
+                    } catch (e: Exception) {
+                        android.util.Log.e("VoiceMessageBubble", "Failed to play audio", e)
+                    }
+                }
+            },
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                imageVector = if (isPlaying) TnIcons.PlayerStop else TnIcons.PlayerPlay,
+                contentDescription = if (isPlaying) "Stop" else "Play",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Spacer(Modifier.width(Standards.SpacingSm))
+
+        Column {
+            Text(
+                "Voice Message",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                if (isPlaying) "Playing..." else "Tap to listen",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -136,13 +241,16 @@ internal fun UserMessageBubble(
 internal fun AssistantMessageBubble(
     message: Messages,
     onLongClick: (() -> Unit)? = null,
+    onReactionClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     MessageBubble(
         isUser = false,
         isPinned = message.isPinned,
+        reaction = message.reaction,
         timestamp = message.timestamp,
         onLongClick = onLongClick,
+        onReactionClick = onReactionClick,
         content = content
     )
 }

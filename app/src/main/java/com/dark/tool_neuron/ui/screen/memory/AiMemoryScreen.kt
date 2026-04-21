@@ -76,20 +76,40 @@ fun AiMemoryScreen(
         MemoryExtractor(memoryRepo)
     }
     val allMemories by memoryRepo.getAll().collectAsStateWithLifecycle(initialValue = emptyList())
+    
+    val chatRepo = remember { com.dark.tool_neuron.data.VaultManager.chatRepo }
+    var reactedMessages by remember { mutableStateOf<List<Messages>>(emptyList()) }
+    
+    LaunchedEffect(Unit) {
+        reactedMessages = chatRepo?.getAllReactedMessages() ?: emptyList()
+    }
+
     val scope = rememberCoroutineScope()
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<MemoryCategory?>(null) }
+    var selectedReaction by remember { mutableStateOf<String?>(null) }
     var showClearAllDialog by remember { mutableStateOf(false) }
     var showClearStaleDialog by remember { mutableStateOf(false) }
 
-    val filteredMemories = remember(allMemories, searchQuery, selectedCategory) {
-        allMemories.filter { memory ->
+    val filteredMemories = remember(allMemories, searchQuery, selectedCategory, selectedReaction) {
+        if (selectedReaction != null) emptyList() // Reactions are separate
+        else allMemories.filter { memory ->
             val matchesSearch = searchQuery.isBlank() ||
                     memory.fact.contains(searchQuery, ignoreCase = true)
             val matchesCategory = selectedCategory == null ||
                     memory.category == selectedCategory
             matchesSearch && matchesCategory
+        }
+    }
+    
+    val filteredReactedMessages = remember(reactedMessages, searchQuery, selectedReaction) {
+        if (selectedReaction == null && selectedCategory != null) emptyList()
+        else reactedMessages.filter { msg ->
+            val matchesSearch = searchQuery.isBlank() ||
+                    msg.content.content.contains(searchQuery, ignoreCase = true)
+            val matchesReaction = selectedReaction == null || msg.reaction == selectedReaction
+            matchesSearch && matchesReaction
         }
     }
 
@@ -108,7 +128,7 @@ fun AiMemoryScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            "${allMemories.size} memories",
+                            "${allMemories.size + reactedMessages.size} items",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -147,7 +167,7 @@ fun AiMemoryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Standards.SpacingLg, vertical = Standards.SpacingXs),
-                placeholder = { Text("Search memories...") },
+                placeholder = { Text("Search memories and reactions...") },
                 leadingIcon = { Icon(TnIcons.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotBlank()) {
@@ -168,10 +188,14 @@ fun AiMemoryScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 FilterChip(
-                    selected = selectedCategory == null,
-                    onClick = { selectedCategory = null },
+                    selected = selectedCategory == null && selectedReaction == null,
+                    onClick = { 
+                        selectedCategory = null
+                        selectedReaction = null
+                    },
                     label = { Text("All") }
                 )
+                
                 MemoryCategory.entries.forEach { category ->
                     val count = allMemories.count { it.category == category }
                     if (count > 0) {
@@ -179,14 +203,29 @@ fun AiMemoryScreen(
                             selected = selectedCategory == category,
                             onClick = {
                                 selectedCategory = if (selectedCategory == category) null else category
+                                selectedReaction = null
                             },
                             label = { Text("${categoryLabel(category)} ($count)") }
                         )
                     }
                 }
+                
+                // Reaction filter chips
+                val reactions = reactedMessages.mapNotNull { it.reaction }.distinct()
+                reactions.forEach { emoji ->
+                    val count = reactedMessages.count { it.reaction == emoji }
+                    FilterChip(
+                        selected = selectedReaction == emoji,
+                        onClick = {
+                            selectedReaction = if (selectedReaction == emoji) null else emoji
+                            selectedCategory = null
+                        },
+                        label = { Text("$emoji ($count)") }
+                    )
+                }
             }
 
-            if (filteredMemories.isEmpty()) {
+            if (filteredMemories.isEmpty() && filteredReactedMessages.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -194,8 +233,9 @@ fun AiMemoryScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (allMemories.isEmpty()) "No memories or pinned items yet.\nPin messages or chat with the AI to populate your vault."
-                        else "No memories match your search.",
+                        text = if (allMemories.isEmpty() && reactedMessages.isEmpty()) 
+                            "No memories or reacted items yet.\nPin messages, react with emojis, or chat with the AI to populate your vault."
+                        else "No items match your search.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -207,7 +247,21 @@ fun AiMemoryScreen(
                     contentPadding = PaddingValues(horizontal = Standards.SpacingLg, vertical = Standards.SpacingSm),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(filteredMemories, key = { it.id }) { memory ->
+                    // Show reacted messages
+                    items(filteredReactedMessages, key = { "msg-${it.msgId}" }) { msg ->
+                        ReactedMessageItem(
+                            message = msg,
+                            onDelete = {
+                                scope.launch {
+                                    chatRepo?.deleteMessage(msg.msgId)
+                                    reactedMessages = chatRepo?.getAllReactedMessages() ?: emptyList()
+                                }
+                            }
+                        )
+                    }
+
+                    // Show AI memories
+                    items(filteredMemories, key = { "mem-${it.id}" }) { memory ->
                         MemoryItem(
                             memory = memory,
                             isStale = memoryExtractor.isStale(memory),
@@ -433,6 +487,87 @@ private fun MemoryItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReactedMessageItem(
+    message: Messages,
+    onDelete: () -> Unit
+) {
+    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 1.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Standards.SpacingMd)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                // Emoji indicator
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(text = message.reaction ?: "✨", fontSize = 16.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(Standards.SpacingMd))
+
+                // Message text
+                Text(
+                    text = message.content.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        TnIcons.X,
+                        contentDescription = "Delete",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Standards.SpacingSm))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (message.role == com.dark.tool_neuron.models.messages.Role.User) "You" else "Assistant",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = dateFormat.format(Date(message.timestamp)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
             }
         }
     }

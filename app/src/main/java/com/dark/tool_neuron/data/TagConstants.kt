@@ -132,6 +132,8 @@ object Tags {
         const val AGENT_SUMMARY = 19
         const val PLUGIN_RESULT_DATA = 20 // BYTES (JSON)
         const val IS_PINNED = 21          // VARINT: 0/1
+        const val REACTION = 22           // BYTES: emoji string
+        const val AUDIO_PATH = 23         // BYTES: path to audio file
     }
 
 }

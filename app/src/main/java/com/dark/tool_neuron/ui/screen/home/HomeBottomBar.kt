@@ -115,6 +115,23 @@ internal fun BottomBar(
     // Coroutine scope for RAG queries
     val scope = rememberCoroutineScope()
 
+    // Voice Recording State
+    val voiceRecorder = remember { com.dark.tool_neuron.util.VoiceRecorder(context) }
+    var isRecordingVoice by remember { mutableStateOf(false) }
+
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            scope.launch {
+                isRecordingVoice = true
+                voiceRecorder.startRecording()
+            }
+        } else {
+            android.widget.Toast.makeText(context, "Microphone permission required", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // More Options overlay state
     var showMoreOptions by remember { mutableStateOf(false) }
 
@@ -401,6 +418,27 @@ internal fun BottomBar(
                             }
                         },
                         icon = TnIcons.Camera
+                    )
+
+                    // 7. Voice Recorder
+                    ActionToggleButton(
+                        onCheckedChange = { recording ->
+                            if (recording) {
+                                audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            } else {
+                                scope.launch {
+                                    isRecordingVoice = false
+                                    val file = voiceRecorder.stopRecording()
+                                    file?.let { chatViewModel.sendVoiceMessage(it) }
+                                }
+                            }
+                        },
+                        checked = isRecordingVoice,
+                        icon = if (isRecordingVoice) TnIcons.PlayerStop else TnIcons.Microphone,
+                        colors = if (isRecordingVoice) IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.error
+                        ) else IconButtonDefaults.filledTonalIconButtonColors()
                     )
 
                     Spacer(Modifier.weight(1f))
