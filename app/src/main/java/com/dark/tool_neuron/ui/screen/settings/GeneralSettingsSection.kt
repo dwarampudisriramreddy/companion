@@ -348,7 +348,6 @@ private fun SystemPromptRulesEditor(
 
 // ── Identity & Personality Section ──
 
-@Composable
 internal fun LazyListScope.identitySettingsSection(
     userName: String?,
     companionName: String?,
