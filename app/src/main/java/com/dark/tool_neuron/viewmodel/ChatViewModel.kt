@@ -1437,6 +1437,7 @@ class ChatViewModel @Inject constructor(
         val globalPrompt = appSettings.systemPrompt.first()
         val userName = appSettings.userName.first()
         val companionName = appSettings.companionName.first()
+        val personalityType = appSettings.personalityType.first()
 
         val hasActiveTools = PluginManager.hasEnabledTools()
             && PluginManager.isToolCallingModelLoaded.value
@@ -1445,10 +1446,11 @@ class ChatViewModel @Inject constructor(
         return buildString {
             append(thinkingDirective)
             
-            if (userName != null || companionName != null) {
+            if (userName != null || companionName != null || personalityType != null) {
                 append("\n\n### Identity:\n")
                 if (userName != null) append("- The user's name is $userName.\n")
                 if (companionName != null) append("- Your name is $companionName.\n")
+                if (personalityType != null) append("- Your MBTI personality type is $personalityType.\n")
             }
             
             // Global prompt formatted as rules

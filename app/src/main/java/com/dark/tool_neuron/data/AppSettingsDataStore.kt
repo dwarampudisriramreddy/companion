@@ -260,6 +260,7 @@ class AppSettingsDataStore(private val context: Context) {
 
     val userName: Flow<String?> = context.appSettingsDataStore.data.map { it[USER_NAME] }
     val companionName: Flow<String?> = context.appSettingsDataStore.data.map { it[COMPANION_NAME] }
+    val personalityType: Flow<String?> = context.appSettingsDataStore.data.map { it[PERSONALITY_TYPE] }
 
     suspend fun updateUserName(name: String) {
         context.appSettingsDataStore.edit { it[USER_NAME] = name }
@@ -267,6 +268,10 @@ class AppSettingsDataStore(private val context: Context) {
 
     suspend fun updateCompanionName(name: String) {
         context.appSettingsDataStore.edit { it[COMPANION_NAME] = name }
+    }
+
+    suspend fun updatePersonalityType(type: String) {
+        context.appSettingsDataStore.edit { it[PERSONALITY_TYPE] = type }
     }
 
     suspend fun clear() {

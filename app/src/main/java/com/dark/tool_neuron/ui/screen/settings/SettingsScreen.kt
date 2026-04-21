@@ -52,6 +52,11 @@ fun SettingsScreen(
     val hardwareTuningEnabled by viewModel.hardwareTuningEnabled.collectAsStateWithLifecycle()
     val hardwareProfile by viewModel.hardwareProfile.collectAsStateWithLifecycle()
     val performanceMode by viewModel.performanceMode.collectAsStateWithLifecycle()
+    // Identity settings
+    val userName by viewModel.userName.collectAsStateWithLifecycle()
+    val companionName by viewModel.companionName.collectAsStateWithLifecycle()
+    val personalityType by viewModel.personalityType.collectAsStateWithLifecycle()
+
     // Installed models
     val installedModels by viewModel.installedModels.collectAsStateWithLifecycle(initialValue = emptyList())
 
@@ -111,6 +116,14 @@ fun SettingsScreen(
                 toolCallingBypassEnabled = toolCallingBypassEnabled,
                 hasToolCallingModel = hasToolCallingModel,
                 toolCallingDownloadState = toolCallingDownloadState,
+                viewModel = viewModel
+            )
+
+            // ── Identity & Personality ──
+            identitySettingsSection(
+                userName = userName,
+                companionName = companionName,
+                personalityType = personalityType,
                 viewModel = viewModel
             )
 

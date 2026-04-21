@@ -28,7 +28,7 @@ fun HomeDrawerScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Vault Manager", style = MaterialTheme.typography.titleLarge) }
+                title = { Text("Memory Vault", style = MaterialTheme.typography.titleLarge) }
             )
         }
     ) { paddingValues ->
@@ -43,7 +43,8 @@ fun HomeDrawerScreen(
             Surface(
                 modifier = Modifier.size(80.dp),
                 shape = RoundedCornerShape(40.dp),
-                color = MaterialTheme.colorScheme.primaryContainer
+                color = MaterialTheme.colorScheme.primaryContainer,
+                onClick = onVaultManagerClick
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -56,13 +57,13 @@ fun HomeDrawerScreen(
             }
 
             Text(
-                text = "Memory Vault",
+                text = "Manage Memories",
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 textAlign = TextAlign.Center
             )
 
             Text(
-                text = "Manage your long-term memories and chat history.",
+                text = "Search through your long-term memories and chat history.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -71,27 +72,28 @@ fun HomeDrawerScreen(
             Spacer(modifier = Modifier.height(Standards.SpacingXl))
 
             Button(
-                onClick = { chatViewModel.startNewConversation() },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                ),
-                shape = RoundedCornerShape(Standards.RadiusMd)
-            ) {
-                Icon(TnIcons.Trash, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(Standards.SpacingSm))
-                Text("Clear Conversation")
-            }
-
-            OutlinedButton(
                 onClick = onVaultManagerClick,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(Standards.RadiusMd)
             ) {
                 Icon(TnIcons.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(Standards.SpacingSm))
-                Text("Search Memories")
+                Text("Open Vault Manager")
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            OutlinedButton(
+                onClick = { chatViewModel.startNewConversation() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                shape = RoundedCornerShape(Standards.RadiusMd)
+            ) {
+                Icon(TnIcons.Trash, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(Standards.SpacingSm))
+                Text("Clear Conversation")
             }
         }
     }

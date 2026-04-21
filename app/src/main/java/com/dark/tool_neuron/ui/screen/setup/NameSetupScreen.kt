@@ -21,7 +21,15 @@ fun NameSetupScreen(
     settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     var userName by remember { mutableStateOf("") }
-    var companionName by remember { mutableStateOf("") }
+    var companionName by remember { mutableStateOf("Companion") }
+    var selectedPersonality by remember { mutableStateOf("INFJ") }
+
+    val mbtiTypes = listOf(
+        "INTJ", "INTP", "ENTJ", "ENTP",
+        "INFJ", "INFP", "ENFJ", "ENFP",
+        "ISTJ", "ISFJ", "ESTJ", "ESFJ",
+        "ISTP", "ISFP", "ESTP", "ESFP"
+    )
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -31,10 +39,12 @@ fun NameSetupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(Standards.SpacingXxl),
+                .padding(Standards.SpacingLg),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(Standards.SpacingMd)
         ) {
+            Spacer(modifier = Modifier.height(Standards.SpacingXxl))
+
             Icon(
                 imageVector = TnIcons.User,
                 contentDescription = null,
@@ -42,22 +52,20 @@ fun NameSetupScreen(
                 tint = MaterialTheme.colorScheme.primary
             )
 
-            Spacer(modifier = Modifier.height(Standards.SpacingLg))
-
             Text(
-                text = "Welcome",
+                text = "Personalize",
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 textAlign = TextAlign.Center
             )
 
             Text(
-                text = "Let's personalize your experience.",
+                text = "Set up your identity and your AI's personality.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(Standards.SpacingXxl))
+            Spacer(modifier = Modifier.height(Standards.SpacingMd))
 
             OutlinedTextField(
                 value = userName,
@@ -68,8 +76,6 @@ fun NameSetupScreen(
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(Standards.SpacingMd))
-
             OutlinedTextField(
                 value = companionName,
                 onValueChange = { companionName = it },
@@ -79,13 +85,36 @@ fun NameSetupScreen(
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(Standards.SpacingXxl))
+            Text(
+                text = "Select AI Personality (MBTI)",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.align(Alignment.Start)
+            )
+
+            androidx.compose.foundation.layout.FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                mbtiTypes.forEach { type ->
+                    androidx.compose.material3.FilterChip(
+                        selected = selectedPersonality == type,
+                        onClick = { selectedPersonality = type },
+                        label = { Text(type) },
+                        shape = RoundedCornerShape(Standards.RadiusMd)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
 
             Button(
                 onClick = {
                     if (userName.isNotBlank() && companionName.isNotBlank()) {
                         settingsViewModel.setUserName(userName)
                         settingsViewModel.setCompanionName(companionName)
+                        settingsViewModel.setPersonalityType(selectedPersonality)
                         onComplete()
                     }
                 },

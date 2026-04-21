@@ -119,6 +119,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val companionName: StateFlow<String?> = appSettingsDataStore.companionName
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val personalityType: StateFlow<String?> = appSettingsDataStore.personalityType
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     // Hardware tuning
     val hardwareTuningEnabled: StateFlow<Boolean> = appSettingsDataStore.hardwareTuningEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -210,6 +213,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setCompanionName(name: String) {
         viewModelScope.launch { appSettingsDataStore.updateCompanionName(name) }
+    }
+
+    fun setPersonalityType(type: String) {
+        viewModelScope.launch { appSettingsDataStore.updatePersonalityType(type) }
     }
 
     fun setHardwareTuningEnabled(enabled: Boolean) {

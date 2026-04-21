@@ -345,6 +345,213 @@ private fun SystemPromptRulesEditor(
     }
 }
 
+// ── Identity & Personality Section ──
+
+internal fun LazyListScope.identitySettingsSection(
+    userName: String?,
+    companionName: String?,
+    personalityType: String?,
+    viewModel: SettingsViewModel
+) {
+    item { Spacer(Modifier.height(Standards.SpacingSm)) }
+    item { SectionDivider() }
+    item { SectionHeader(title = "Identity & Personality") }
+
+    item {
+        var editingUser by remember { mutableStateOf(false) }
+        var tempUserName by remember { mutableStateOf(userName ?: "") }
+
+        StandardCard(
+            title = "User Name",
+            description = userName ?: "Not set",
+            icon = TnIcons.User
+        ) {
+            if (editingUser) {
+                Column(verticalArrangement = Arrangement.spacedBy(Standards.SpacingSm)) {
+                    OutlinedTextField(
+                        value = tempUserName,
+                        onValueChange = { tempUserName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Your Name") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(Standards.RadiusMd)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { 
+                            editingUser = false
+                            tempUserName = userName ?: ""
+                        }) {
+                            Text("Cancel")
+                        }
+                        ActionTextButton(
+                            onClickListener = {
+                                viewModel.setUserName(tempUserName)
+                                editingUser = false
+                            },
+                            text = "Save",
+                            icon = TnIcons.Check
+                        )
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    ActionTextButton(
+                        onClickListener = { editingUser = true },
+                        text = "Edit Name",
+                        icon = TnIcons.Edit
+                    )
+                }
+            }
+        }
+    }
+
+    item {
+        var editingCompanion by remember { mutableStateOf(false) }
+        var tempCompanionName by remember { mutableStateOf(companionName ?: "") }
+
+        StandardCard(
+            title = "Companion Name",
+            description = companionName ?: "Companion",
+            icon = TnIcons.Sparkles
+        ) {
+            if (editingCompanion) {
+                Column(verticalArrangement = Arrangement.spacedBy(Standards.SpacingSm)) {
+                    OutlinedTextField(
+                        value = tempCompanionName,
+                        onValueChange = { tempCompanionName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("AI Name") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(Standards.RadiusMd)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { 
+                            editingCompanion = false
+                            tempCompanionName = companionName ?: ""
+                        }) {
+                            Text("Cancel")
+                        }
+                        ActionTextButton(
+                            onClickListener = {
+                                viewModel.setCompanionName(tempCompanionName)
+                                editingCompanion = false
+                            },
+                            text = "Save",
+                            icon = TnIcons.Check
+                        )
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    ActionTextButton(
+                        onClickListener = { editingCompanion = true },
+                        text = "Edit Name",
+                        icon = TnIcons.Edit
+                    )
+                }
+            }
+        }
+    }
+
+    item {
+        val mbtiTypes = listOf(
+            "INTJ", "INTP", "ENTJ", "ENTP",
+            "INFJ", "INFP", "ENFJ", "ENFP",
+            "ISTJ", "ISFJ", "ESTJ", "ESFJ",
+            "ISTP", "ISFP", "ESTP", "ESFP"
+        )
+        
+        Column(verticalArrangement = Arrangement.spacedBy(Standards.SpacingSm)) {
+            Text(
+                text = "AI Personality Type (MBTI)",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Text(
+                text = "Select a personality type to influence how the AI interacts with you.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // FlowRow for personality chips
+            androidx.compose.foundation.layout.FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Standards.SpacingSm),
+                verticalArrangement = Arrangement.spacedBy(Standards.SpacingSm)
+            ) {
+                mbtiTypes.forEach { type ->
+                    androidx.compose.material3.FilterChip(
+                        selected = personalityType == type,
+                        onClick = { viewModel.setPersonalityType(type) },
+                        label = { Text(type) },
+                        shape = RoundedCornerShape(Standards.RadiusMd)
+                    )
+                }
+            }
+            
+            personalityType?.let { type ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    shape = RoundedCornerShape(Standards.RadiusMd),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Column(modifier = Modifier.padding(Standards.SpacingMd)) {
+                        Text(
+                            text = getMbtiDescription(type).first,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = getMbtiDescription(type).second,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun getMbtiDescription(type: String): Pair<String, String> {
+    return when (type) {
+        "INTJ" -> "The Architect" to "Strategic, logical, and highly independent. Prefers efficiency and long-term planning."
+        "INTP" -> "The Logician" to "Analytical, curious, and objective. Loves theoretical patterns and solving complex problems."
+        "ENTJ" -> "The Commander" to "Decisive, bold, and goal-oriented. Natural leaders who value competence and structure."
+        "ENTP" -> "The Debater" to "Inventive, enthusiastic, and quick-witted. Enjoys mental challenges and exploring new ideas."
+        "INFJ" -> "The Advocate" to "Insightful, idealistic, and compassionate. Deeply intuitive and driven by strong internal values."
+        "INFP" -> "The Mediator" to "Empathic, creative, and loyal. Values authenticity and seeks harmony in all things."
+        "ENFJ" -> "The Protagonist" to "Charismatic, inspiring, and altruistic. Passionate about helping others and building community."
+        "ENFP" -> "The Campaigner" to "Energetic, imaginative, and sociable. Sees life as full of possibilities and connections."
+        "ISTJ" -> "The Logistician" to "Practical, fact-minded, and reliable. Values tradition, order, and clear responsibilities."
+        "ISFJ" -> "The Defender" to "Dedicated, warm, and protective. Quietly thorough and committed to helping those they care for."
+        "ESTJ" -> "The Executive" to "Organized, direct, and authoritative. Excellent at managing things and people efficiently."
+        "ESFJ" -> "The Consul" to "Social, caring, and popular. Eager to help and highly sensitive to the needs of others."
+        "ISTP" -> "The Virtuoso" to "Observant, practical, and adaptable. Skilled with tools and loves exploring how things work."
+        "ISFP" -> "The Adventurer" to "Artistic, sensitive, and spontaneous. Quietly passionate and enjoys experiencing the world."
+        "ESTP" -> "The Entrepreneur" to "Action-oriented, bold, and perceptive. Thrives on immediate results and dynamic environments."
+        "ESFP" -> "The Entertainer" to "Playful, outgoing, and spontaneous. Loves being the center of attention and making life fun."
+        else -> "Unknown" to "No description available."
+    }
+}
+
 // ── Chat Settings Section ──
 
 internal fun LazyListScope.chatSettingsSection(
