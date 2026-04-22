@@ -52,10 +52,12 @@ fun BodyContent(
     val ttsSynthesizing by chatViewModel.ttsSynthesizing.collectAsStateWithLifecycle()
     val ttsModelLoaded by chatViewModel.ttsModelLoaded.collectAsStateWithLifecycle()
     val hasTtsModel by chatViewModel.hasTtsModel.collectAsStateWithLifecycle()
+    val tasks by chatViewModel.currentTasks.collectAsStateWithLifecycle()
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val dataStore = remember { com.dark.tool_neuron.data.AppSettingsDataStore(context) }
     val imageBlurEnabled by dataStore.imageBlurEnabled.collectAsStateWithLifecycle(initialValue = true)
+    val guidedTasksEnabled by dataStore.guidedTasksEnabled.collectAsStateWithLifecycle(initialValue = false)
 
     val listState = rememberLazyListState()
 
@@ -202,6 +204,17 @@ fun BodyContent(
                     showActionsSheet = false
                     selectedMessage = null
                 }
+            )
+        }
+
+        if (tasks.isNotEmpty()) {
+            TaskModeOverlay(
+                tasks = tasks,
+                onTaskSelected = { task ->
+                    chatViewModel.sendTextMessage("I'd like to do the task: $task")
+                    chatViewModel.hideTaskOverlay()
+                },
+                onDismiss = { chatViewModel.hideTaskOverlay() }
             )
         }
 

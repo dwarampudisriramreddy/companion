@@ -37,6 +37,7 @@ import com.dark.tool_neuron.models.table_schema.Model
 import com.dark.tool_neuron.service.ModelDownloadService
 import com.dark.tool_neuron.ui.components.ActionTextButton
 import com.dark.tool_neuron.ui.components.ActionToggleGroup
+import com.dark.tool_neuron.ui.components.ActionSwitch
 import com.dark.tool_neuron.ui.components.BodyLabel
 import com.dark.tool_neuron.ui.components.SectionDivider
 import com.dark.tool_neuron.ui.components.SectionHeader
@@ -352,11 +353,32 @@ internal fun LazyListScope.identitySettingsSection(
     userName: String?,
     companionName: String?,
     personalityType: String?,
+    guidedTasksEnabled: Boolean,
     viewModel: SettingsViewModel
 ) {
     item { Spacer(Modifier.height(Standards.SpacingSm)) }
     item { SectionDivider() }
     item { SectionHeader(title = "Identity & Personality") }
+
+    item {
+        StandardCard(
+            title = "Guided Tasks Mode",
+            description = if (guidedTasksEnabled) 
+                "AI provides specific tasks for personal growth and mutual understanding." 
+                else "Normal chat mode: Default regular conversation and natural interaction.",
+            icon = TnIcons.Bolt
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                ActionSwitch(
+                    checked = guidedTasksEnabled,
+                    onCheckedChange = { viewModel.setGuidedTasksEnabled(it) }
+                )
+            }
+        }
+    }
 
     item {
         var editingUser by remember { mutableStateOf(false) }

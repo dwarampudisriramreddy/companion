@@ -56,6 +56,7 @@ fun SettingsScreen(
     val userName by viewModel.userName.collectAsStateWithLifecycle()
     val companionName by viewModel.companionName.collectAsStateWithLifecycle()
     val personalityType by viewModel.personalityType.collectAsStateWithLifecycle()
+    val guidedTasksEnabled by viewModel.guidedTasksEnabled.collectAsStateWithLifecycle()
 
     // Installed models
     val installedModels by viewModel.installedModels.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -124,6 +125,7 @@ fun SettingsScreen(
                 userName = userName,
                 companionName = companionName,
                 personalityType = personalityType,
+                guidedTasksEnabled = guidedTasksEnabled,
                 viewModel = viewModel
             )
 

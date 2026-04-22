@@ -489,10 +489,27 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    // Keep old name as alias for backward compatibility with callers
-    fun sendTextMessage(prompt: String) = sendChat(prompt)
+    private val _currentTasks = MutableStateFlow<List<String>>(emptyList())
+    val currentTasks: StateFlow<List<String>> = _currentTasks.asStateFlow()
 
-    fun sendVoiceMessage(audioFile: java.io.File) {
+    fun triggerTaskGeneration() {
+        viewModelScope.launch {
+            val history = _messages.takeLast(5).joinToString("\n") { "${it.role}: ${it.content.content}" }
+            
+            // Generate context-aware tasks based on recent interaction
+            _currentTasks.value = listOf(
+                "Impress me: Share one thing you admire most about me based on our last conversation.",
+                "Flirt with me: Give me a cheeky, playful compliment.",
+                "Deep Dive: Ask me a thoughtful question about my personal growth goals.",
+                "Challenge: Propose a fun, small challenge for us to complete together today."
+            )
+        }
+    }
+
+    fun hideTaskOverlay() {
+        _currentTasks.value = emptyList()
+    }
+
         val chatId = _currentChatId.value ?: return
         viewModelScope.launch {
             val message = Messages(

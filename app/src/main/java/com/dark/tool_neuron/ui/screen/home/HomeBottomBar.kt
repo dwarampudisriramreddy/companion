@@ -420,7 +420,17 @@ internal fun BottomBar(
                         icon = TnIcons.Camera
                     )
 
-                    // 7. Voice Recorder
+                    // 7. Guided Tasks (Task Mode)
+                    if (isMemoryEnabled) {
+                        ActionToggleButton(
+                            onCheckedChange = { _ -> chatViewModel.triggerTaskGeneration() },
+                            checked = false, // Overlay logic handles visibility
+                            icon = TnIcons.BulbFilled,
+                            enabled = isMemoryEnabled
+                        )
+                    }
+
+                    // 8. Voice Recorder
                     ActionToggleButton(
                         onCheckedChange = { recording: Boolean ->
                             if (recording) {

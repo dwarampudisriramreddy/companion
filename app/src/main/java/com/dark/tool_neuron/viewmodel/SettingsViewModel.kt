@@ -122,6 +122,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val personalityType: StateFlow<String?> = appSettingsDataStore.personalityType
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val guidedTasksEnabled: StateFlow<Boolean> = appSettingsDataStore.guidedTasksEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     // Hardware tuning
     val hardwareTuningEnabled: StateFlow<Boolean> = appSettingsDataStore.hardwareTuningEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -217,6 +220,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setPersonalityType(type: String) {
         viewModelScope.launch { appSettingsDataStore.updatePersonalityType(type) }
+    }
+
+    fun setGuidedTasksEnabled(enabled: Boolean) {
+        viewModelScope.launch { appSettingsDataStore.updateGuidedTasksEnabled(enabled) }
     }
 
     fun setHardwareTuningEnabled(enabled: Boolean) {

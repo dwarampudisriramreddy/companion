@@ -40,6 +40,7 @@ class AppSettingsDataStore(private val context: Context) {
         private val USER_NAME = stringPreferencesKey("user_name")
         private val COMPANION_NAME = stringPreferencesKey("companion_name")
         private val PERSONALITY_TYPE = stringPreferencesKey("personality_type")
+        private val GUIDED_TASKS_ENABLED = booleanPreferencesKey("guided_tasks_enabled")
         private val APP_OPEN_COUNT = androidx.datastore.preferences.core.intPreferencesKey("app_open_count")
         private val TIME_SPENT_MS = androidx.datastore.preferences.core.longPreferencesKey("time_spent_ms")
     }
@@ -262,6 +263,7 @@ class AppSettingsDataStore(private val context: Context) {
     val userName: Flow<String?> = context.appSettingsDataStore.data.map { it[USER_NAME] }
     val companionName: Flow<String?> = context.appSettingsDataStore.data.map { it[COMPANION_NAME] }
     val personalityType: Flow<String?> = context.appSettingsDataStore.data.map { it[PERSONALITY_TYPE] }
+    val guidedTasksEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { it[GUIDED_TASKS_ENABLED] ?: false }
 
     suspend fun updateUserName(name: String) {
         context.appSettingsDataStore.edit { it[USER_NAME] = name }
@@ -273,6 +275,10 @@ class AppSettingsDataStore(private val context: Context) {
 
     suspend fun updatePersonalityType(type: String) {
         context.appSettingsDataStore.edit { it[PERSONALITY_TYPE] = type }
+    }
+
+    suspend fun updateGuidedTasksEnabled(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[GUIDED_TASKS_ENABLED] = enabled }
     }
 
     suspend fun clear() {
