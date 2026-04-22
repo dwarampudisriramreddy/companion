@@ -520,6 +520,16 @@ class ChatViewModel @Inject constructor(
                 }
         }
     }
+        }
+    }
+
+
+                    if (index != -1) {
+                        _messages[index] = updated
+                    }
+                }
+    fun sendTextMessage(prompt: String) = sendChat(prompt)
+
     fun sendVoiceMessage(audioFile: java.io.File) {
         val chatId = _currentChatId.value ?: return
         viewModelScope.launch {
@@ -538,11 +548,41 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun pinMessageToVault(message: Messages) {
+        viewModelScope.launch {
+            val chatId = _currentChatId.value
+            chatManager.pinMessageToVault(chatId, message)
+                .onSuccess {
+                    Toast.makeText(appContext, "Message pinned to Vault", Toast.LENGTH_SHORT).show()
+                    if (chatId != null) {
+                        val index = _messages.indexOfFirst { it.msgId == message.msgId }
+                        if (index != -1) {
+                            _messages[index] = _messages[index].copy(isPinned = true)
+                        }
+                    }
+                }
+                .onFailure { e ->
+                    reportError("Failed to pin message: ${e.message}")
+                }
+        }
+    }
 
+    fun updateMessageReaction(message: Messages, reaction: String?) {
+        viewModelScope.launch {
+            val chatId = _currentChatId.value ?: return@launch
+            val updated = message.copy(reaction = reaction)
+            chatManager.updateMessage(chatId, updated)
+                .onSuccess {
+                    val index = _messages.indexOfFirst { it.msgId == message.msgId }
                     if (index != -1) {
                         _messages[index] = updated
                     }
                 }
+                .onFailure { e ->
+                    reportError("Failed to update reaction: ${e.message}")
+                }
+        }
+    }
                 .onFailure { e ->
                     reportError("Failed to update reaction: ${e.message}")
                 }
@@ -2308,34 +2348,9 @@ class ChatViewModel @Inject constructor(
         _currentTasks.value = emptyList()
     }
 
-    fun sendTextMessage(prompt: String) = sendChat(prompt)
-
-    fun sendVoiceMessage(audioFile: java.io.File) {
-        val chatId = _currentChatId.value ?: return
-        viewModelScope.launch {
-            val message = Messages(
-                role = Role.User,
-                content = MessageContent(
-                    contentType = ContentType.Audio,
-                    audioPath = audioFile.absolutePath,
-                    content = "Voice Message"
-                )
-            )
-            chatManager.addMessage(chatId, message)
-                .onSuccess {
-                    _messages.add(it)
-                }
         }
     }
 
-    fun pinMessageToVault(message: Messages) {
-        viewModelScope.launch {
-            val chatId = _currentChatId.value
-            chatManager.pinMessageToVault(chatId, message)
-                .onSuccess {
-                    Toast.makeText(appContext, "Message pinned to Vault", Toast.LENGTH_SHORT).show()
-                    if (chatId != null) {
-                        val index = _messages.indexOfFirst { it.msgId == message.msgId }
                         if (index != -1) {
                             _messages[index] = _messages[index].copy(isPinned = true)
                         }
@@ -2347,13 +2362,6 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun updateMessageReaction(message: Messages, reaction: String?) {
-        viewModelScope.launch {
-            val chatId = _currentChatId.value ?: return@launch
-            val updated = message.copy(reaction = reaction)
-            chatManager.updateMessage(chatId, updated)
-                .onSuccess {
-                    val index = _messages.indexOfFirst { it.msgId == message.msgId }
                     if (index != -1) {
                         _messages[index] = updated
                     }
