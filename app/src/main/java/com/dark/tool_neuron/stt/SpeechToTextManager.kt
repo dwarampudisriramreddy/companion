@@ -25,6 +25,8 @@ object SpeechToTextManager {
     private var onResultCallback: ((String) -> Unit)? = null
     private var onErrorCallback: ((String) -> Unit)? = null
 
+    private var resultDeferred: kotlinx.coroutines.CompletableDeferred<String>? = null
+
     fun init(context: Context) {
         if (speechRecognizer != null) return
         
@@ -69,16 +71,16 @@ object SpeechToTextManager {
                     Log.e(TAG, "Speech recognition error: $message")
                     _isListening.value = false
                     onErrorCallback?.invoke(message)
+                    resultDeferred?.complete("")
                 }
 
                 override fun onResults(results: Bundle?) {
                     val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) {
-                        val text = matches[0]
-                        Log.d(TAG, "Speech recognition results: $text")
-                        _transcribedText.value = text
-                        onResultCallback?.invoke(text)
-                    }
+                    val text = matches?.firstOrNull() ?: ""
+                    Log.d(TAG, "Speech recognition results: $text")
+                    _transcribedText.value = text
+                    onResultCallback?.invoke(text)
+                    resultDeferred?.complete(text)
                 }
 
                 override fun onPartialResults(partialResults: Bundle?) {
@@ -98,6 +100,7 @@ object SpeechToTextManager {
         onResultCallback = onResult
         onErrorCallback = onError
         _transcribedText.value = ""
+        resultDeferred = kotlinx.coroutines.CompletableDeferred()
         
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -106,6 +109,19 @@ object SpeechToTextManager {
         }
         
         speechRecognizer?.startListening(intent)
+    }
+
+    suspend fun stopAndGetResult(): String {
+        speechRecognizer?.stopListening()
+        _isListening.value = false
+        return try {
+            kotlinx.coroutines.withTimeout(2000) {
+                resultDeferred?.await() ?: ""
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Timeout waiting for STT results")
+            _transcribedText.value
+        }
     }
 
     fun stopListening() {

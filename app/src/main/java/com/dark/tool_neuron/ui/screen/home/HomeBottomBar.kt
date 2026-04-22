@@ -446,9 +446,9 @@ internal fun BottomBar(
                             } else {
                                 scope.launch {
                                     isRecordingVoice = false
-                                    SpeechToTextManager.stopListening()
+                                    val result = SpeechToTextManager.stopAndGetResult()
                                     val file = voiceRecorder.stopRecording()
-                                    file?.let { chatViewModel.sendVoiceMessage(it, lastTranscribedText) }
+                                    file?.let { chatViewModel.sendVoiceMessage(it, result) }
                                 }
                             }
                         },

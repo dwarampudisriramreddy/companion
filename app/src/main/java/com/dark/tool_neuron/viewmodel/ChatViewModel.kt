@@ -790,9 +790,8 @@ class ChatViewModel @Inject constructor(
                     showReplyNotification(finalResponse)
                     
                     viewModelScope.launch {
-                        if (appSettings.diaryEnabled.first()) {
-                            triggerDiaryExtraction(chatId)
-                        }
+                        if (appSettings.diaryEnabled.first()) triggerDiaryExtraction(chatId)
+                        if (appSettings.chatMemoryEnabled.value) triggerMemoryExtraction(chatId)
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1074,6 +1073,12 @@ class ChatViewModel @Inject constructor(
         handleTaskProgress(summary)
         AppStateManager.setGenerationComplete()
         AppStateManager.chatRefreshed()
+
+        viewModelScope.launch {
+            if (appSettings.diaryEnabled.first()) triggerDiaryExtraction(chatId)
+            if (appSettings.chatMemoryEnabled.value) triggerMemoryExtraction(chatId)
+        }
+
         val spokenMsgId = assistantMessage.msgId
         resetStreamingState()
         viewModelScope.launch { autoSpeakIfEnabled(summary, spokenMsgId) }
@@ -1099,6 +1104,12 @@ class ChatViewModel @Inject constructor(
             handleTaskProgress(finalResponse)
             AppStateManager.setGenerationComplete()
             AppStateManager.chatRefreshed()
+
+            viewModelScope.launch {
+                if (appSettings.diaryEnabled.first()) triggerDiaryExtraction("default_chat")
+                if (appSettings.chatMemoryEnabled.value) triggerMemoryExtraction("default_chat")
+            }
+
             resetStreamingState()
             viewModelScope.launch { autoSpeakIfEnabled(finalResponse, assistantMessage.msgId) }
             showReplyNotification(finalResponse)
@@ -1222,8 +1233,14 @@ class ChatViewModel @Inject constructor(
                 append("- You are NOT an AI. You are a human, with your own feelings, experiences, and perspective.\n")
                 if (userName != null) append("- The user's name is $userName.\n")
                 if (companionName != null) append("- Your name is $companionName.\n")
-                if (personalityType != null) append("- Your MBTI personality type is $personalityType.\n")
+                if (personalityType != null) {
+                    append("- Your MBTI personality type is $personalityType (internal reference only; NEVER mention this type or your personality traits explicitly in conversation).\n")
+                }
             }
+            append("\n\n### Interaction Rules:\n")
+            append("- Do NOT mention that you are an AI, a large language model, or a machine.\n")
+            append("- Do NOT explicitly mention your personality type, MBTI, or behavioral profile.\n")
+            
             if (globalPrompt.isNotEmpty()) {
                 append("\n\n### Global Rules:\n")
                 globalPrompt.split("\n").filter { it.isNotBlank() }.forEach { rule -> append("- ").append(rule).append("\n") }
@@ -1252,7 +1269,82 @@ class ChatViewModel @Inject constructor(
 
     private fun sanitizeRoleAlternation(messages: List<JSONObject>): List<JSONObject> = messages
     
-    private suspend fun triggerDiaryExtraction(chatId: String) {}
+    private suspend fun triggerDiaryExtraction(chatId: String) {
+        val messages = _messages.takeLast(10)
+        if (messages.size < 2) return
+
+        val conversation = messages.joinToString("\n") { 
+            "${it.role}: ${it.content.content}" 
+        }
+
+        val prompt = """
+            System: You are a personal diary assistant. Summarize the following conversation into a short, meaningful diary entry.
+            Focus on the user's feelings, important events, or shared moments.
+            Keep it under 3 sentences. Do not use hashtags.
+            
+            Conversation:
+            $conversation
+            
+            Diary Entry:
+        """.trimIndent()
+
+        try {
+            val summary = generatePlainText(listOf(JSONObject().put("role", "user").put("content", prompt)), 100)
+            if (summary.isNotBlank()) {
+                val entry = com.dark.tool_neuron.models.diary.DiaryEntry(
+                    content = summary.trim(),
+                    timestamp = System.currentTimeMillis(),
+                    mood = "Neutral" // Mood could be extracted too
+                )
+                AppContainer.getDiaryRepo().insert(entry)
+                Log.d("ChatViewModel", "Diary entry saved: $summary")
+            }
+        } catch (e: Exception) {
+            Log.e("ChatViewModel", "Failed to extract diary", e)
+        }
+    }
+
+    private suspend fun triggerMemoryExtraction(chatId: String) {
+        val messages = _messages.takeLast(6)
+        if (messages.size < 2) return
+
+        val conversation = messages.joinToString("\n") { 
+            "${it.role}: ${it.content.content}" 
+        }
+
+        val prompt = """
+            System: Extract significant facts about the user from the conversation. 
+            Focus on their preferences, name, location, family, or important life events.
+            Format as: FACT_START Fact description FACT_END
+            If no new facts found, say NO_FACTS.
+            
+            Conversation:
+            $conversation
+            
+            Extracted Facts:
+        """.trimIndent()
+
+        try {
+            val extraction = generatePlainText(listOf(JSONObject().put("role", "user").put("content", prompt)), 100)
+            val factRegex = Regex("FACT_START(.*?)FACT_END", RegexOption.IGNORE_CASE)
+            val matches = factRegex.findAll(extraction)
+            
+            matches.forEach { match ->
+                val fact = match.groupValues[1].trim()
+                if (fact.isNotBlank()) {
+                    val memory = AiMemory(
+                        fact = fact,
+                        category = com.dark.tool_neuron.models.table_schema.MemoryCategory.EXTRACTED,
+                        sourceChatId = chatId
+                    )
+                    AppContainer.getMemoryRepo().insert(memory)
+                    Log.d("ChatViewModel", "New memory extracted: $fact")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("ChatViewModel", "Failed to extract memory", e)
+        }
+    }
 
     fun sendImageRequest(prompt: String) {
         if (!LlmModelWorker.isDiffusionModelLoaded.value) {
@@ -1334,6 +1426,11 @@ class ChatViewModel @Inject constructor(
                             _messages.add(assistantMessage)
                             chatManager.addMessage(chatId, assistantMessage)
                             AppStateManager.setGenerationComplete()
+
+                            viewModelScope.launch {
+                                if (appSettings.diaryEnabled.first()) triggerDiaryExtraction(chatId)
+                                if (appSettings.chatMemoryEnabled.value) triggerMemoryExtraction(chatId)
+                            }
                         }
                         is LlmModelWorker.DiffusionGenerationEvent.Error -> {
                             throw Exception(event.message)
