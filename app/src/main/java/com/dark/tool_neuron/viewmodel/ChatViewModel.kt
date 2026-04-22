@@ -257,7 +257,8 @@ class ChatViewModel @Inject constructor(
         if (text.isEmpty()) return
 
         viewModelScope.launch {
-            TTSManager.speak(text, message.msgId)
+            val settings = ttsDataStore.getSettings().first()
+            TTSManager.speak(text, settings, message.msgId)
         }
     }
 
@@ -1187,39 +1188,44 @@ class ChatViewModel @Inject constructor(
                     userMessageAdded.set(true)
                 }
 
-                val config = getDiffusionConfig(currentModelId!!)
+                val modelId = currentModelId!!
+                val modelConfig = getModelConfig(modelId)
+                val diffusionInferenceParams = com.dark.tool_neuron.worker.DiffusionInferenceParams.fromJson(modelConfig?.modelInferenceParams)
+
+                val startTime = System.currentTimeMillis()
 
                 LlmModelWorker.generateDiffusionImage(
                     prompt = prompt,
-                    negativePrompt = "",
-                    steps = config.inferenceParams.steps,
-                    cfgScale = config.inferenceParams.cfgScale,
-                    seed = config.inferenceParams.seed,
-                    width = config.inferenceParams.width,
-                    height = config.inferenceParams.height,
-                    scheduler = config.inferenceParams.scheduler,
-                    showDiffusionProcess = config.inferenceParams.showDiffusionProcess,
-                    showDiffusionStride = config.inferenceParams.showDiffusionStride
+                    negativePrompt = diffusionInferenceParams.negativePrompt,
+                    steps = diffusionInferenceParams.steps,
+                    cfgScale = diffusionInferenceParams.cfgScale,
+                    seed = -1L,
+                    width = 512,
+                    height = 512,
+                    scheduler = diffusionInferenceParams.scheduler,
+                    showDiffusionProcess = diffusionInferenceParams.showDiffusionProcess,
+                    showDiffusionStride = diffusionInferenceParams.showDiffusionStride
                 ).collect { event ->
                     when (event) {
                         is LlmModelWorker.DiffusionGenerationEvent.Progress -> {
                             _imageGenerationProgress.value = event.progress
-                            _imageGenerationStep.value = event.step
-                            _streamingImage.value = event.bitmap
+                            _imageGenerationStep.value = "${event.currentStep}/${event.totalSteps}"
+                            _streamingImage.value = event.intermediateImage
                         }
                         is LlmModelWorker.DiffusionGenerationEvent.Complete -> {
-                            _streamingImage.value = event.bitmap
+                            val generationTimeMs = System.currentTimeMillis() - startTime
+                            _streamingImage.value = event.image
                             val imageMetrics = ImageGenerationMetrics(
-                                steps = config.inferenceParams.steps,
-                                cfgScale = config.inferenceParams.cfgScale,
+                                steps = diffusionInferenceParams.steps,
+                                cfgScale = diffusionInferenceParams.cfgScale,
                                 seed = event.seed,
-                                width = event.bitmap.width,
-                                height = event.bitmap.height,
-                                scheduler = config.inferenceParams.scheduler,
-                                generationTimeMs = event.generationTimeMs
+                                width = event.width,
+                                height = event.height,
+                                scheduler = diffusionInferenceParams.scheduler,
+                                generationTimeMs = generationTimeMs
                             )
 
-                            val base64 = LlmModelWorker.bytesToBase64(LlmModelWorker.bitmapToBytes(event.bitmap))
+                            val base64 = LlmModelWorker.bytesToBase64(bitmapToBytes(event.image))
                             val assistantMessage = Messages(
                                 role = Role.Assistant,
                                 content = MessageContent(
@@ -1247,9 +1253,15 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    private fun bitmapToBytes(bitmap: Bitmap): ByteArray {
+        val stream = java.io.ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+        return stream.toByteArray()
+    }
+
     private suspend fun getDiffusionConfig(modelId: String): com.dark.tool_neuron.worker.DiffusionConfig {
-        val config = getModelConfig(modelId) ?: return com.dark.tool_neuron.worker.DiffusionConfig(com.dark.tool_neuron.worker.ModelInfo("", ProviderType.DIFFUSION))
-        return com.dark.tool_neuron.worker.DiffusionConfig.fromJson(config.modelInferenceParams)
+        val config = getModelConfig(modelId)
+        return com.dark.tool_neuron.worker.DiffusionConfig.fromJson(config?.modelInferenceParams)
     }
 
     private fun jsonArrayToList(array: JSONArray?): List<String> = emptyList()
