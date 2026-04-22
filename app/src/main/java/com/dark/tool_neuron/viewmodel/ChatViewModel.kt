@@ -257,7 +257,7 @@ class ChatViewModel @Inject constructor(
         if (text.isEmpty()) return
 
         viewModelScope.launch {
-            val settings = ttsDataStore.getSettings().first()
+            val settings = ttsDataStore.settings.first()
             TTSManager.speak(text, settings, message.msgId)
         }
     }
