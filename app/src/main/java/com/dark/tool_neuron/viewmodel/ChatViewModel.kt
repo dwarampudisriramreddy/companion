@@ -510,16 +510,6 @@ class ChatViewModel @Inject constructor(
         _currentTasks.value = emptyList()
     }
 
-    fun pinMessageToVault(message: Messages) {
-        viewModelScope.launch {
-            val chatId = _currentChatId.value
-            chatManager.pinMessageToVault(chatId, message)
-                .onSuccess {
-                    Toast.makeText(appContext, "Message pinned to Vault", Toast.LENGTH_SHORT).show()
-                    
-                    // Update the local message state if we are in the current chat
-                    if (chatId != null) {
-                        val index = _messages.indexOfFirst { it.msgId == message.msgId }
                         if (index != -1) {
                             _messages[index] = _messages[index].copy(isPinned = true)
                         }
@@ -549,13 +539,6 @@ class ChatViewModel @Inject constructor(
     }
 
 
-    fun updateMessageReaction(message: Messages, reaction: String?) {
-        viewModelScope.launch {
-            val chatId = _currentChatId.value ?: return@launch
-            val updated = message.copy(reaction = reaction)
-            chatManager.updateMessage(chatId, updated)
-                .onSuccess {
-                    val index = _messages.indexOfFirst { it.msgId == message.msgId }
                     if (index != -1) {
                         _messages[index] = updated
                     }
@@ -2304,6 +2287,83 @@ class ChatViewModel @Inject constructor(
             return if (actualLen >= expectedLen) bytes.size else i
         }
     }
+    private val _currentTasks = MutableStateFlow<List<String>>(emptyList())
+    val currentTasks: StateFlow<List<String>> = _currentTasks.asStateFlow()
+
+    fun triggerTaskGeneration() {
+        viewModelScope.launch {
+            _currentTasks.value = listOf(
+                "Creative Collaboration: Let's co-create a short story about an adventure we'd take together in a fantasy world.",
+                "Exploratory Vision: Describe a new hobby or project we could start exploring to spark our creativity.",
+                "Intellectual Journey: Pose a 'what-if' scenario about the future of technology or human expression for us to debate.",
+                "Mindful Experiment: Propose a small sensory or creative experiment we can both try right now to shift our perspectives.",
+                "Artistic Exchange: Recommend a piece of art, music, or literature, and we'll discuss the emotions it stirs in us.",
+                "World Building: Let's invent a unique culture or society and discuss how we might fit into it.",
+                "Dream Mapping: Describe a surreal dream-like landscape and we'll explore what it might represent for us."
+            )
+        }
+    }
+
+    fun hideTaskOverlay() {
+        _currentTasks.value = emptyList()
+    }
+
+    fun sendTextMessage(prompt: String) = sendChat(prompt)
+
+    fun sendVoiceMessage(audioFile: java.io.File) {
+        val chatId = _currentChatId.value ?: return
+        viewModelScope.launch {
+            val message = Messages(
+                role = Role.User,
+                content = MessageContent(
+                    contentType = ContentType.Audio,
+                    audioPath = audioFile.absolutePath,
+                    content = "Voice Message"
+                )
+            )
+            chatManager.addMessage(chatId, message)
+                .onSuccess {
+                    _messages.add(it)
+                }
+        }
+    }
+
+    fun pinMessageToVault(message: Messages) {
+        viewModelScope.launch {
+            val chatId = _currentChatId.value
+            chatManager.pinMessageToVault(chatId, message)
+                .onSuccess {
+                    Toast.makeText(appContext, "Message pinned to Vault", Toast.LENGTH_SHORT).show()
+                    if (chatId != null) {
+                        val index = _messages.indexOfFirst { it.msgId == message.msgId }
+                        if (index != -1) {
+                            _messages[index] = _messages[index].copy(isPinned = true)
+                        }
+                    }
+                }
+                .onFailure { e ->
+                    reportError("Failed to pin message: ${e.message}")
+                }
+        }
+    }
+
+    fun updateMessageReaction(message: Messages, reaction: String?) {
+        viewModelScope.launch {
+            val chatId = _currentChatId.value ?: return@launch
+            val updated = message.copy(reaction = reaction)
+            chatManager.updateMessage(chatId, updated)
+                .onSuccess {
+                    val index = _messages.indexOfFirst { it.msgId == message.msgId }
+                    if (index != -1) {
+                        _messages[index] = updated
+                    }
+                }
+                .onFailure { e ->
+                    reportError("Failed to update reaction: ${e.message}")
+                }
+        }
+    }
+
     companion object {
         private const val TAG = "ChatViewModel"
         private const val PLAN_MAX_TOKENS = 150
@@ -2315,7 +2375,7 @@ class ChatViewModel @Inject constructor(
         private const val REPETITION_MAX_CHECK_LEN = 800
 
         private val THINK_TAG_REGEX = Regex(
-            "<think>(.*?)</think>|\[THINK](.*?)\[/THINK]|<reasoning>(.*?)</reasoning>",
+            "<think>(.*?)</think>|\\[THINK](.*?)\\[/THINK]|<reasoning>(.*?)</reasoning>",
             RegexOption.DOT_MATCHES_ALL
         )
     }
