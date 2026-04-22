@@ -1078,7 +1078,8 @@ class ChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             if (appSettings.diaryEnabled.first()) triggerDiaryExtraction(chatId)
-            if (appSettings.chatMemoryEnabled.value) triggerMemoryExtraction(chatId)
+            if (chatMemoryEnabled.value) triggerMemoryExtraction(chatId)
+
         }
 
         val spokenMsgId = assistantMessage.msgId
@@ -1431,7 +1432,8 @@ class ChatViewModel @Inject constructor(
 
                             viewModelScope.launch {
                                 if (appSettings.diaryEnabled.first()) triggerDiaryExtraction(chatId)
-                                if (appSettings.chatMemoryEnabled.value) triggerMemoryExtraction(chatId)
+                                if (chatMemoryEnabled.value) triggerMemoryExtraction(chatId)
+
                             }
                         }
                         is LlmModelWorker.DiffusionGenerationEvent.Error -> {
