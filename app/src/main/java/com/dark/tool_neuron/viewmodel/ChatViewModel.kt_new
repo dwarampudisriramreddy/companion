@@ -563,6 +563,8 @@ class ChatViewModel @Inject constructor(
         userMessageAdded.set(false)
         currentMetrics = null
         _error.value = null
+
+        val base64Img = LlmModelWorker.bytesToBase64(imageData.firstOrNull() ?: ByteArray(0))
         
         viewModelScope.launch {
             VaultManager.memoryRepo?.insert(
@@ -571,7 +573,7 @@ class ChatViewModel @Inject constructor(
                     category = com.dark.tool_neuron.models.table_schema.MemoryCategory.GENERAL,
                     sourceChatId = "default_chat",
                     contentType = 2,
-                    imageData = base64Image
+                    imageData = base64Img
                 )
             )
         }
@@ -582,7 +584,7 @@ class ChatViewModel @Inject constructor(
             content = MessageContent(
                 contentType = ContentType.TextWithImage, 
                 content = prompt,
-                imageData = base64Image
+                imageData = base64Img
             ),
             modelId = currentModelId,
         )
@@ -1105,8 +1107,6 @@ class ChatViewModel @Inject constructor(
         _imageGenerationStep.value = ""
     }
 
-    private suspend fun autoSpeakIfEnabled(text: String, msgId: String) {}
-
     override fun onCleared() {
         super.onCleared()
         generationJob?.cancel()
@@ -1166,6 +1166,6 @@ class ChatViewModel @Inject constructor(
         private const val REPETITION_MIN_PATTERN_LEN = 30
         private const val REPETITION_MIN_REPEATS = 4
         private const val REPETITION_MAX_CHECK_LEN = 800
-        private val THINK_TAG_REGEX = Regex("<think>(.*?)</think>|\\[THINK](.*?)\\[/THINK]|<reasoning>(.*?)</reasoning>", RegexOption.DOT_MATCHES_ALL)
+        private val THINK_TAG_REGEX = Regex("<think>(.*?)</think>|\\\\[THINK](.*?)\\\\[/THINK]|<reasoning>(.*?)</reasoning>", RegexOption.DOT_MATCHES_ALL)
     }
 }
