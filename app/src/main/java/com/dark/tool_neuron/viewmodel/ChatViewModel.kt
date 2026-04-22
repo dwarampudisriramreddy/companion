@@ -225,6 +225,54 @@ class ChatViewModel @Inject constructor(
     private val _contextUsagePercent = MutableStateFlow(0f)
     val contextUsagePercent: StateFlow<Float> = _contextUsagePercent.asStateFlow()
 
+    fun showDynamicWindow() { _showDynamicWindow.value = true }
+    fun hideDynamicWindow() { _showDynamicWindow.value = false }
+    fun showModelList() { _showModelList.value = true }
+    fun hideModelList() { _showModelList.value = false }
+
+    fun stop() {
+        generationJob?.cancel()
+        generationJob = null
+        LlmModelWorker.ggufStopGeneration()
+        LlmModelWorker.stopDiffusionGeneration()
+        resetStreamingState()
+    }
+
+    private fun reportError(message: String?) {
+        _error.value = message
+    }
+
+    private suspend fun getModelConfig(modelId: String): com.dark.tool_neuron.models.table_schema.ModelConfig? {
+        return withContext(Dispatchers.IO) {
+            AppContainer.getModelRepository().getConfigByModelId(modelId)
+        }
+    }
+
+    fun speakMessage(message: Messages) {
+        val raw = message.content.content
+        val text = if (THINK_TAG_REGEX.containsMatchIn(raw)) {
+            raw.replace(THINK_TAG_REGEX, "").trim()
+        } else raw
+
+        if (text.isEmpty()) return
+
+        viewModelScope.launch {
+            TTSManager.speak(text, message.msgId)
+        }
+    }
+
+    fun stopTTS() {
+        TTSManager.stopPlayback()
+    }
+
+    fun deleteMessage(msgId: String) {
+        viewModelScope.launch {
+            chatManager.deleteMessage(msgId).onSuccess {
+                _messages.removeAll { it.msgId == msgId }
+            }
+        }
+    }
+
     val ttsPlayingMsgId = TTSManager.currentPlayingMsgId
     val ttsIsPlaying = TTSManager.isPlaying
     val ttsSynthesizing = TTSManager.isSynthesizing
@@ -896,7 +944,12 @@ class ChatViewModel @Inject constructor(
                 if (consecutiveFailures >= 2) break
                 if (result.rawData != null) {
                     val resultData = PluginResultData(result.pluginName, normalizedName, argsObj.toString(), result.resultJson, isSuccess)
-                    val pluginMessage = Messages(Role.Assistant, MessageContent(ContentType.PluginResult, "Executed $normalizedName", pluginResultData = resultData), currentModelId, pluginMetrics = PluginExecutionMetrics(result.pluginName, normalizedName, result.executionTimeMs, isSuccess))
+                    val pluginMessage = Messages(
+                        role = Role.Assistant,
+                        content = MessageContent(ContentType.PluginResult, "Executed $normalizedName", pluginResultData = resultData),
+                        modelId = currentModelId,
+                        pluginMetrics = PluginExecutionMetrics(result.pluginName, normalizedName, result.executionTimeMs, isSuccess)
+                    )
                     if (!userMessageAdded.get() && currentUserMessage != null) { _messages.add(currentUserMessage!!); userMessageAdded.set(true) }
                     _messages.add(pluginMessage)
                 }
@@ -922,7 +975,14 @@ class ChatViewModel @Inject constructor(
         val chatId = "default_chat"
         if (!userMessageAdded.get() && currentUserMessage != null) { _messages.add(currentUserMessage!!); userMessageAdded.set(true) }
         _messages.filter { it.content.contentType == ContentType.PluginResult }.forEach { chatManager.addMessage(chatId, it) }
-        val assistantMessage = Messages(Role.Assistant, MessageContent(ContentType.Text, summary), currentModelId, toolChainSteps = steps, agentPlan = plan, agentSummary = summary)
+        val assistantMessage = Messages(
+            role = Role.Assistant,
+            content = MessageContent(ContentType.Text, summary),
+            modelId = currentModelId,
+            toolChainSteps = steps,
+            agentPlan = plan,
+            agentSummary = summary
+        )
         _messages.add(assistantMessage)
         chatManager.addMessage(chatId, assistantMessage)
         AppStateManager.setGenerationComplete()
@@ -942,7 +1002,11 @@ class ChatViewModel @Inject constructor(
         _streamingAssistantMessage.value = finalResponse
         if (!userMessageAdded.get() && currentUserMessage != null) { _messages.add(currentUserMessage!!); userMessageAdded.set(true) }
         if (finalResponse.isNotBlank()) {
-            val assistantMessage = Messages(Role.Assistant, MessageContent(ContentType.Text, finalResponse), currentModelId)
+            val assistantMessage = Messages(
+                role = Role.Assistant,
+                content = MessageContent(ContentType.Text, finalResponse),
+                modelId = currentModelId
+            )
             _messages.add(assistantMessage)
             chatManager.addMessage("default_chat", assistantMessage)
             AppStateManager.setGenerationComplete()
@@ -1092,6 +1156,101 @@ class ChatViewModel @Inject constructor(
     private fun sanitizeRoleAlternation(messages: List<JSONObject>): List<JSONObject> = messages
     
     private suspend fun triggerDiaryExtraction(chatId: String) {}
+
+    fun sendImageRequest(prompt: String) {
+        if (!LlmModelWorker.isDiffusionModelLoaded.value) {
+            reportError("Please load an image generation model first")
+            return
+        }
+        if (_isGenerating.value) return
+
+        _isGenerating.value = true
+        _streamingUserMessage.value = prompt
+        _streamingAssistantMessage.value = ""
+        _streamingImage.value = null
+        _imageGenerationProgress.value = 0f
+        _imageGenerationStep.value = ""
+        _error.value = null
+
+        currentUserMessage = Messages(
+            role = Role.User,
+            content = MessageContent(contentType = ContentType.Text, content = prompt),
+            modelId = currentModelId
+        )
+        AppStateManager.setHasMessages(true)
+
+        generationJob = viewModelScope.launch {
+            try {
+                val chatId = "default_chat"
+                chatManager.addMessage(chatId, currentUserMessage!!).onSuccess { userMsg ->
+                    _messages.add(userMsg)
+                    userMessageAdded.set(true)
+                }
+
+                val config = getDiffusionConfig(currentModelId!!)
+
+                LlmModelWorker.generateDiffusionImage(
+                    prompt = prompt,
+                    negativePrompt = "",
+                    steps = config.inferenceParams.steps,
+                    cfgScale = config.inferenceParams.cfgScale,
+                    seed = config.inferenceParams.seed,
+                    width = config.inferenceParams.width,
+                    height = config.inferenceParams.height,
+                    scheduler = config.inferenceParams.scheduler,
+                    showDiffusionProcess = config.inferenceParams.showDiffusionProcess,
+                    showDiffusionStride = config.inferenceParams.showDiffusionStride
+                ).collect { event ->
+                    when (event) {
+                        is LlmModelWorker.DiffusionGenerationEvent.Progress -> {
+                            _imageGenerationProgress.value = event.progress
+                            _imageGenerationStep.value = event.step
+                            _streamingImage.value = event.bitmap
+                        }
+                        is LlmModelWorker.DiffusionGenerationEvent.Complete -> {
+                            _streamingImage.value = event.bitmap
+                            val imageMetrics = ImageGenerationMetrics(
+                                steps = config.inferenceParams.steps,
+                                cfgScale = config.inferenceParams.cfgScale,
+                                seed = event.seed,
+                                width = event.bitmap.width,
+                                height = event.bitmap.height,
+                                scheduler = config.inferenceParams.scheduler,
+                                generationTimeMs = event.generationTimeMs
+                            )
+
+                            val base64 = LlmModelWorker.bytesToBase64(LlmModelWorker.bitmapToBytes(event.bitmap))
+                            val assistantMessage = Messages(
+                                role = Role.Assistant,
+                                content = MessageContent(
+                                    contentType = ContentType.Image,
+                                    imageData = base64
+                                ),
+                                modelId = currentModelId,
+                                imageMetrics = imageMetrics
+                            )
+                            _messages.add(assistantMessage)
+                            chatManager.addMessage(chatId, assistantMessage)
+                            AppStateManager.setGenerationComplete()
+                        }
+                        is LlmModelWorker.DiffusionGenerationEvent.Error -> {
+                            throw Exception(event.message)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in sendImageRequest", e)
+                reportError(e.message)
+            } finally {
+                resetStreamingState()
+            }
+        }
+    }
+
+    private suspend fun getDiffusionConfig(modelId: String): com.dark.tool_neuron.worker.DiffusionConfig {
+        val config = getModelConfig(modelId) ?: return com.dark.tool_neuron.worker.DiffusionConfig(com.dark.tool_neuron.worker.ModelInfo("", ProviderType.DIFFUSION))
+        return com.dark.tool_neuron.worker.DiffusionConfig.fromJson(config.modelInferenceParams)
+    }
 
     private fun jsonArrayToList(array: JSONArray?): List<String> = emptyList()
 
