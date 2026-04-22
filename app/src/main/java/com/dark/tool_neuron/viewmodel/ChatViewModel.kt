@@ -793,7 +793,7 @@ class ChatViewModel @Inject constructor(
                     
                     viewModelScope.launch {
                         if (appSettings.diaryEnabled.first()) triggerDiaryExtraction(chatId)
-                        if (appSettings.chatMemoryEnabled.first()) triggerMemoryExtraction(chatId)
+                        if (chatMemoryEnabled.value) triggerMemoryExtraction(chatId)
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1336,7 +1336,7 @@ class ChatViewModel @Inject constructor(
                 if (fact.isNotBlank()) {
                     val memory = AiMemory(
                         fact = fact,
-                        category = MemoryCategory.EXTRACTED,
+                        category = MemoryCategory.GENERAL,
                         sourceChatId = chatId
                     )
                     AppContainer.getMemoryRepo().insert(memory)
