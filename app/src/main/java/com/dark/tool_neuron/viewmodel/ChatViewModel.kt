@@ -523,9 +523,23 @@ class ChatViewModel @Inject constructor(
     private val _currentTasks = MutableStateFlow<List<String>>(emptyList())
     val currentTasks: StateFlow<List<String>> = _currentTasks.asStateFlow()
 
+    data class GuidedTask(
+        val title: String,
+        val description: String,
+        val subtasks: List<String>,
+        val systemPrompt: String
+    )
+
+    private val _activeGuidedTask = MutableStateFlow<GuidedTask?>(null)
+    val activeGuidedTask: StateFlow<GuidedTask?> = _activeGuidedTask.asStateFlow()
+
+    private val _completedSubtasks = MutableStateFlow<Set<String>>(emptySet())
+    val completedSubtasks: StateFlow<Set<String>> = _completedSubtasks.asStateFlow()
+
     fun triggerTaskGeneration() {
         viewModelScope.launch {
             _currentTasks.value = listOf(
+                "Impress Me: Demonstrate your capabilities and unique personality to leave a lasting impression.",
                 "Creative Collaboration: Let's co-create a short story about an adventure we'd take together in a fantasy world.",
                 "Exploratory Vision: Describe a new hobby or project we could start exploring to spark our creativity.",
                 "Intellectual Journey: Pose a 'what-if' scenario about the future of technology or human expression for us to debate.",
@@ -537,26 +551,96 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun startGuidedTask(taskTitle: String) {
+        val task = when {
+            taskTitle.startsWith("Impress Me") -> GuidedTask(
+                title = "Impress Me",
+                description = "Demonstrate your unique capabilities and personality.",
+                subtasks = listOf(
+                    "Show your creative side",
+                    "Demonstrate your logical reasoning",
+                    "Share a personal insight or memory",
+                    "Propose a unique activity for us"
+                ),
+                systemPrompt = "You are in 'Impress Me' mode. Your goal is to showcase your depth, creativity, and personality. Guide the user through a series of interactions where you demonstrate different facets of yourself. Keep track of the user's progress and acknowledge when a subtask is completed."
+            )
+            else -> null
+        }
+        
+        _activeGuidedTask.value = task
+        _completedSubtasks.value = emptySet()
+        _currentTasks.value = emptyList()
+        
+        task?.let {
+            sendTextMessage("I'm ready for the '${it.title}' task. Let's begin!")
+        }
+    }
+
+    fun completeSubtask(subtask: String) {
+        _completedSubtasks.value = _completedSubtasks.value + subtask
+    }
+
+    fun clearActiveTask() {
+        _activeGuidedTask.value = null
+        _completedSubtasks.value = emptySet()
+    }
+
+    private fun handleTaskProgress(assistantMessage: String) {
+        val task = _activeGuidedTask.value ?: return
+        
+        // Simple heuristic: if assistant mentions a task or uses a special tag
+        // Ideally we'd have the AI output a specific tag like <complete_task>Task Name</complete_task>
+        val taskTagRegex = Regex("<complete_task>(.*?)</complete_task>", RegexOption.IGNORE_CASE)
+        val matches = taskTagRegex.findAll(assistantMessage)
+        
+        matches.forEach { match ->
+            val subtaskName = match.groupValues[1].trim()
+            // Find the closest matching subtask
+            task.subtasks.find { it.equals(subtaskName, ignoreCase = true) }?.let {
+                completeSubtask(it)
+            }
+        }
+        
+        // Also check if any subtask name is mentioned in a positive context if no tags found
+        if (matches.none()) {
+            task.subtasks.forEach { subtask ->
+                if (assistantMessage.contains(subtask, ignoreCase = true) && 
+                    (assistantMessage.contains("completed", ignoreCase = true) || 
+                     assistantMessage.contains("done", ignoreCase = true) ||
+                     assistantMessage.contains("achieved", ignoreCase = true))) {
+                    completeSubtask(subtask)
+                }
+            }
+        }
+    }
+
     fun hideTaskOverlay() {
         _currentTasks.value = emptyList()
     }
 
     fun sendTextMessage(prompt: String) = sendChat(prompt)
 
-    fun sendVoiceMessage(audioFile: java.io.File) {
+    fun sendVoiceMessage(audioFile: java.io.File, transcribedText: String = "") {
         val chatId = _currentChatId.value ?: return
+        val displayContent = transcribedText.ifBlank { "Voice Message" }
+        
         viewModelScope.launch {
             val message = Messages(
                 role = Role.User,
                 content = MessageContent(
                     contentType = ContentType.Audio,
                     audioPath = audioFile.absolutePath,
-                    content = "Voice Message"
-                )
+                    content = displayContent
+                ),
+                modelId = currentModelId
             )
             chatManager.addMessage(chatId, message)
                 .onSuccess {
                     _messages.add(it)
+                    // If we have transcription, trigger AI response
+                    if (transcribedText.isNotBlank()) {
+                        sendChat(transcribedText)
+                    }
                 }
         }
     }
@@ -700,6 +784,7 @@ class ChatViewModel @Inject constructor(
                     )
                     _messages.add(assistantMessage)
                     chatManager.addMessage(chatId, assistantMessage)
+                    handleTaskProgress(finalResponse)
                     AppStateManager.setGenerationComplete()
                     AppStateManager.chatRefreshed()
                     showReplyNotification(finalResponse)
@@ -986,6 +1071,7 @@ class ChatViewModel @Inject constructor(
         )
         _messages.add(assistantMessage)
         chatManager.addMessage(chatId, assistantMessage)
+        handleTaskProgress(summary)
         AppStateManager.setGenerationComplete()
         AppStateManager.chatRefreshed()
         val spokenMsgId = assistantMessage.msgId
@@ -1010,6 +1096,7 @@ class ChatViewModel @Inject constructor(
             )
             _messages.add(assistantMessage)
             chatManager.addMessage("default_chat", assistantMessage)
+            handleTaskProgress(finalResponse)
             AppStateManager.setGenerationComplete()
             AppStateManager.chatRefreshed()
             resetStreamingState()
@@ -1119,8 +1206,17 @@ class ChatViewModel @Inject constructor(
         val personalityType = appSettings.personalityType.first()
         val hasActiveTools = PluginManager.hasEnabledTools() && PluginManager.isToolCallingModelLoaded.value
         val thinkingDirective = if (_thinkingModeEnabled.value && !hasActiveTools) "/think" else "/no_think"
+        
+        val taskPrompt = _activeGuidedTask.value?.systemPrompt
+        
         return buildString {
             append(thinkingDirective)
+            if (taskPrompt != null) {
+                append("\n\n### GUIDED TASK MODE:\n")
+                append(taskPrompt)
+                append("\n\nCurrently completed subtasks: ")
+                append(_completedSubtasks.value.joinToString(", ").ifEmpty { "None" })
+            }
             if (userName != null || companionName != null || personalityType != null) {
                 append("\n\n### Identity:\n")
                 append("- You are NOT an AI. You are a human, with your own feelings, experiences, and perspective.\n")

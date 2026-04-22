@@ -211,8 +211,7 @@ fun BodyContent(
             TaskModeOverlay(
                 tasks = tasks,
                 onTaskSelected = { task ->
-                    chatViewModel.sendTextMessage("I'd like to do the task: $task")
-                    chatViewModel.hideTaskOverlay()
+                    chatViewModel.startGuidedTask(task)
                 },
                 onDismiss = { chatViewModel.hideTaskOverlay() }
             )

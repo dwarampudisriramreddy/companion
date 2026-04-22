@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dark.tool_neuron.activity.RagActivity
 import com.dark.tool_neuron.global.Standards
 import com.dark.tool_neuron.models.ModelType
+import com.dark.tool_neuron.stt.SpeechToTextManager
 import com.dark.tool_neuron.ui.components.ActionButton
 import com.dark.tool_neuron.ui.components.ActionProgressButton
 import com.dark.tool_neuron.ui.components.ActionToggleButton
@@ -118,6 +119,7 @@ internal fun BottomBar(
     // Voice Recording State
     val voiceRecorder = remember { com.dark.tool_neuron.util.VoiceRecorder(context) }
     var isRecordingVoice by remember { mutableStateOf(false) }
+    var lastTranscribedText by remember { mutableStateOf("") }
 
     val audioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -125,7 +127,13 @@ internal fun BottomBar(
         if (isGranted) {
             scope.launch {
                 isRecordingVoice = true
+                lastTranscribedText = ""
                 voiceRecorder.startRecording()
+                SpeechToTextManager.startListening(
+                    context = context,
+                    onResult = { lastTranscribedText = it },
+                    onError = { /* Log error if needed */ }
+                )
             }
         } else {
             android.widget.Toast.makeText(context, "Microphone permission required", android.widget.Toast.LENGTH_SHORT).show()
@@ -438,8 +446,9 @@ internal fun BottomBar(
                             } else {
                                 scope.launch {
                                     isRecordingVoice = false
+                                    SpeechToTextManager.stopListening()
                                     val file = voiceRecorder.stopRecording()
-                                    file?.let { chatViewModel.sendVoiceMessage(it) }
+                                    file?.let { chatViewModel.sendVoiceMessage(it, lastTranscribedText) }
                                 }
                             }
                         },

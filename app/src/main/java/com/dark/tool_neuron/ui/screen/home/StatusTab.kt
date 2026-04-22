@@ -20,6 +20,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.draw.clip
 import com.dark.tool_neuron.models.state.AppState
 import com.dark.tool_neuron.viewmodel.ChatViewModel
 import com.dark.tool_neuron.global.Standards
@@ -35,6 +40,9 @@ internal fun StatusTabContent(
     isMemoryEnabled: Boolean = false,
     ttsModelLoaded: Boolean = false
 ) {
+    val activeTask by chatViewModel.activeGuidedTask.collectAsStateWithLifecycle()
+    val completedSubtasks by chatViewModel.completedSubtasks.collectAsStateWithLifecycle()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -42,7 +50,19 @@ internal fun StatusTabContent(
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(Standards.SpacingSm)
     ) {
+        activeTask?.let { task ->
+            GuidedTaskContent(
+                task = task,
+                completedSubtasks = completedSubtasks
+            )
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                thickness = 0.5.dp
+            )
+        }
+
         when (appState) {
+
             is AppState.Welcome -> WelcomeContent()
             is AppState.NoModelLoaded -> NoModelLoadedContent()
             is AppState.ModelLoaded -> ModelLoadedContent(appState)
@@ -103,6 +123,72 @@ internal fun CompactBadge(text: String, color: androidx.compose.ui.graphics.Colo
                 style = MaterialTheme.typography.labelSmall,
                 color = color,
                 fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+internal fun GuidedTaskContent(
+    task: ChatViewModel.GuidedTask,
+    completedSubtasks: Set<String>
+) {
+    val progress = if (task.subtasks.isNotEmpty()) {
+        completedSubtasks.size.toFloat() / task.subtasks.size.toFloat()
+    } else 1f
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                RoundedCornerShape(Standards.RadiusMd)
+            )
+            .padding(Standards.SpacingMd),
+        verticalArrangement = Arrangement.spacedBy(Standards.SpacingXs)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = task.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "${completedSubtasks.size}/${task.subtasks.size}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(CircleShape),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+        )
+
+        val nextSubtask = task.subtasks.find { it !in completedSubtasks }
+        nextSubtask?.let {
+            Text(
+                text = "Next: $it",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        } ?: run {
+            Text(
+                text = "All tasks completed!",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
             )
         }
     }
