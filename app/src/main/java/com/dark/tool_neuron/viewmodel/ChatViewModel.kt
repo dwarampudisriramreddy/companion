@@ -42,6 +42,8 @@ import com.dark.tool_neuron.models.ModelType
 import com.dark.tool_neuron.tts.TTSManager
 import com.dark.tool_neuron.tts.TTSSettings
 import com.dark.tool_neuron.worker.LlmModelWorker
+import com.dark.tool_neuron.models.table_schema.AiMemory
+import com.dark.tool_neuron.models.table_schema.MemoryCategory
 import com.dark.tool_neuron.models.engine_schema.DecodingMetrics
 import com.dark.tool_neuron.viewmodel.RagQueryDisplayResult
 import com.dark.gguf_lib.toolcalling.ToolCall
@@ -791,7 +793,7 @@ class ChatViewModel @Inject constructor(
                     
                     viewModelScope.launch {
                         if (appSettings.diaryEnabled.first()) triggerDiaryExtraction(chatId)
-                        if (appSettings.chatMemoryEnabled.value) triggerMemoryExtraction(chatId)
+                        if (appSettings.chatMemoryEnabled.first()) triggerMemoryExtraction(chatId)
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1293,8 +1295,8 @@ class ChatViewModel @Inject constructor(
             if (summary.isNotBlank()) {
                 val entry = com.dark.tool_neuron.models.diary.DiaryEntry(
                     content = summary.trim(),
-                    timestamp = System.currentTimeMillis(),
-                    mood = "Neutral" // Mood could be extracted too
+                    createdAt = System.currentTimeMillis(),
+                    mood = "Neutral"
                 )
                 AppContainer.getDiaryRepo().insert(entry)
                 Log.d("ChatViewModel", "Diary entry saved: $summary")
@@ -1334,7 +1336,7 @@ class ChatViewModel @Inject constructor(
                 if (fact.isNotBlank()) {
                     val memory = AiMemory(
                         fact = fact,
-                        category = com.dark.tool_neuron.models.table_schema.MemoryCategory.EXTRACTED,
+                        category = MemoryCategory.EXTRACTED,
                         sourceChatId = chatId
                     )
                     AppContainer.getMemoryRepo().insert(memory)
