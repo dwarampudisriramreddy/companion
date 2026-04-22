@@ -1110,7 +1110,7 @@ class ChatViewModel @Inject constructor(
 
             viewModelScope.launch {
                 if (appSettings.diaryEnabled.first()) triggerDiaryExtraction("default_chat")
-                if (appSettings.chatMemoryEnabled.value) triggerMemoryExtraction("default_chat")
+                if (chatMemoryEnabled.value) triggerMemoryExtraction("default_chat")
             }
 
             resetStreamingState()
