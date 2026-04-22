@@ -2297,6 +2297,14 @@ class ChatViewModel @Inject constructor(
                 leadByte and 0xE0 == 0xC0 -> 2 // 110xxxxx
                 leadByte and 0xF0 == 0xE0 -> 3 // 1110xxxx
                 leadByte and 0xF8 == 0xF0 -> 4 // 11110xxx
+                else -> 1 // Invalid lead byte, treat as single
+            }
+
+            val actualLen = bytes.size - i
+            return if (actualLen >= expectedLen) bytes.size else i
+        }
+    }
+
     private val _currentTasks = MutableStateFlow<List<String>>(emptyList())
     val currentTasks: StateFlow<List<String>> = _currentTasks.asStateFlow()
 
