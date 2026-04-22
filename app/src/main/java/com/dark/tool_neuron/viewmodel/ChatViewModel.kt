@@ -2297,16 +2297,12 @@ class ChatViewModel @Inject constructor(
                 leadByte and 0xE0 == 0xC0 -> 2 // 110xxxxx
                 leadByte and 0xF0 == 0xE0 -> 3 // 1110xxxx
                 leadByte and 0xF8 == 0xF0 -> 4 // 11110xxx
-                else -> 1 // Invalid lead byte, treat as single
-            }
-
-            val actualLen = bytes.size - i
-            return if (actualLen >= expectedLen) bytes.size else i
-        }
-    }
     private val _currentTasks = MutableStateFlow<List<String>>(emptyList())
-    companion object {
-    companion object {
+    val currentTasks: StateFlow<List<String>> = _currentTasks.asStateFlow()
+
+    fun triggerTaskGeneration() {
+        viewModelScope.launch {
+            _currentTasks.value = listOf(
                 "Creative Collaboration: Let's co-create a short story about an adventure we'd take together in a fantasy world.",
                 "Exploratory Vision: Describe a new hobby or project we could start exploring to spark our creativity.",
                 "Intellectual Journey: Pose a 'what-if' scenario about the future of technology or human expression for us to debate.",
@@ -2321,8 +2317,8 @@ class ChatViewModel @Inject constructor(
     fun hideTaskOverlay() {
         _currentTasks.value = emptyList()
     }
-    companion object {
 
+    companion object {
         private const val TAG = "ChatViewModel"
         private const val PLAN_MAX_TOKENS = 150
         private const val SUMMARY_MAX_TOKENS = 512
@@ -2333,7 +2329,7 @@ class ChatViewModel @Inject constructor(
         private const val REPETITION_MAX_CHECK_LEN = 800
 
         private val THINK_TAG_REGEX = Regex(
-            "<think>(.*?)</think>|\\[THINK](.*?)\\[/THINK]|<reasoning>(.*?)</reasoning>",
+            "<think>(.*?)</think>|\[THINK](.*?)\[/THINK]|<reasoning>(.*?)</reasoning>",
             RegexOption.DOT_MATCHES_ALL
         )
     }
